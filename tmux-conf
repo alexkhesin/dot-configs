@@ -5,16 +5,26 @@ bind-key ` send-prefix  # escape hatch: `` sends a single `
 
 # other key bindings
 bind-key space next-window
+bind-key '|' split-window -h
+bind-key _ split-window
 
 # Set status bar
 set -g status-bg black
 set -g status-fg white
+set -g status-right "\"#22T\" %m/%d %l:%M%p"
 
 # highlight the currently active window
-set-window-option -g window-status-current-bg red
+setw -g window-status-current-bg white
+setw -g window-status-current-fg black
+# do not need to #F (ascii currently active indicator) since we are highlighting
+# the currently active window using colors
+setw -g window-status-format "#I:#W"
+setw -g window-status-format "#I:#W"
 
 # highlight windows with activity
 setw -g monitor-activity on
 # display a status line message when activity occurs in a window for
 # which the monitor-activity window option is enabled.
 set -g visual-activity on
+
+set -g history-limit 1000000
