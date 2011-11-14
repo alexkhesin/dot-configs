@@ -19,7 +19,7 @@ setw -g window-status-current-fg black
 # do not need to #F (ascii currently active indicator) since we are highlighting
 # the currently active window using colors
 setw -g window-status-format "#I:#W"
-setw -g window-status-format "#I:#W"
+setw -g window-status-current-format "#I:#W"
 
 # highlight windows with activity
 setw -g monitor-activity on
