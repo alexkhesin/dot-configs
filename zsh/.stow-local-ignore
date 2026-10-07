@@ -1,0 +1,6 @@
+aliases
+p10k.zsh
+\.DS_Store$
+\.git
+.+~            # emacs backup files
+\#.*\#          # emacs autosave files

@@ -1,0 +1,7 @@
+# alias ssh='ssh -Y -X -C'  # force X11 tunneling through ssh
+alias h=history
+alias e="~/.emacs.d/ak-emacs/bin/emacs-connect emacs.default"
+alias e1="~/.emacs.d/ak-emacs/bin/emacs-connect emacs.1"
+alias e2="~/.emacs.d/ak-emacs/bin/emacs-connect emacs.2"
+alias e3="~/.emacs.d/ak-emacs/bin/emacs-connect emacs.3"
+alias e4="~/.emacs.d/ak-emacs/bin/emacs-connect emacs.4"
