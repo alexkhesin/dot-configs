@@ -1,7 +1,18 @@
-# alias ssh='ssh -Y -X -C'  # force X11 tunneling through ssh
 alias h=history
 alias e="$XDG_BIN_HOME/emacs-connect emacs.default"
 alias e1="$XDG_BIN_HOME/emacs-connect emacs.1"
 alias e2="$XDG_BIN_HOME/emacs-connect emacs.2"
 alias e3="$XDG_BIN_HOME/emacs-connect emacs.3"
 alias e4="$XDG_BIN_HOME/emacs-connect emacs.4"
+
+if [ "$(uname)" = "Linux" ]; then
+  alias ls='ls --color=auto'
+  alias grep='grep --color=auto'
+  alias fgrep='fgrep --color=auto'
+  alias egrep='egrep --color=auto'
+  alias diff='diff --color=auto'
+  alias ip='ip --color=auto'
+
+  # corp
+  alias fu=fileutil
+fi

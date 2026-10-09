@@ -1,3 +1,17 @@
+PLUGIN_DIR=$HOME/.local/share/zsh-plugins
+ensure_dir $PLUGIN_DIR
+
+# BOOTSTRAP: Automatically clone external plugins & themes if missing
+if [ ! -d $PLUGIN_DIR/zsh-syntax-highlighting ]; then
+  echo "📥 Cloning zsh-syntax-highlighting for the first time..."
+  git clone --depth=1 --shallow-submodules https://github.com/zsh-users/zsh-syntax-highlighting.git $PLUGIN_DIR/zsh-syntax-highlighting
+fi
+
+if [ ! -d $PLUGIN_DIR/powerlevel10k ]; then
+  echo "📥 Cloning powerlevel10k theme..."
+  git clone --depth=1 --shallow-submodules https://github.com/romkatv/powerlevel10k.git $PLUGIN_DIR/powerlevel10k
+fi
+
 # Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
 # Initialization code that may require console input (password prompts, [y/n]
 # confirmations, etc.) must go above this block; everything else may go below.
@@ -18,51 +32,47 @@ HISTSIZE=1000000
 SAVEHIST=1000000
 DIRSTACKSIZE=10
 
-setopt INC_APPEND_HISTORY  # append history one line at a time, rather then
-                           # on shell exit
-setopt EXTENDED_HISTORY    # record timestamps in the history file
-setopt HIST_NO_STORE       # do not store 'history' command itself
-setopt HIST_REDUCE_BLANKS  # remove superfluous blanks
-# Turn on all dup-removing options
-setopt HIST_IGNORE_DUPS HIST_IGNORE_ALL_DUPS HIST_EXPIRE_DUPS_FIRST
-setopt HIST_SAVE_NO_DUPS HIST_FIND_NO_DUPS
+# Navigation & Directories
+setopt AUTO_CD              # Typing a folder path cd's into it
+setopt AUTO_PUSHD           # Make cd push the old directory onto the directory stack
+setopt PUSHD_IGNORE_DUPS    # Don't push duplicate directories onto the stack
+setopt PUSHD_MINUS          # Invert the meaning of + and - for pushd
 
-setopt notify
-setopt nobeep
-setopt rec_exact
-setopt long_list_jobs
-setopt list_types
-setopt auto_resume
-setopt autopushd
-setopt pushd_minus
-setopt extended_glob
-setopt auto_menu
-setopt no_list_beep
-setopt pushd_ignore_dups
-setopt no_nomatch  # do not print out "no matches found" when expanding globs
-setopt equals
-setopt magic_equal_subst
-setopt hist_verify
-setopt numeric_glob_sort
-setopt print_eight_bit
-setopt complete_in_word # ZSH FAQ: 4.4
-setopt complete_aliases
-setopt share_history
-setopt correct          # spell-check command lines
-setopt NO_BG_NICE  # do not nice down background processes
-# setopt NO_BEEP     # do not beep on errors
-setopt AUTO_CD     # cd to directories without typing 'cd'
+# History Configuration
+unsetopt SHARE_HISTORY          # Do NOT auto-import commands from other shells
+setopt INC_APPEND_HISTORY_TIME  # Write to HISTFILE immediately upon command completion
+setopt EXTENDED_HISTORY         # Save timestamps & elapsed execution duration
+setopt HIST_IGNORE_ALL_DUPS     # Purge older duplicates when writing new entries
+setopt HIST_SAVE_NO_DUPS        # Prevent writing duplicates to the file
+setopt HIST_FIND_NO_DUPS        # Don't show duplicates during history search
+setopt HIST_REDUCE_BLANKS       # Strip trailing and redundant whitespace
+setopt HIST_VERIFY              # Don't immediately execute history expansions (!$)
 
-unsetopt ignore_eof
-unsetopt hash_cmds
-unsetopt promptcr
+# Completion & Globbing
+setopt EXTENDED_GLOB        # Enable advanced pattern matching (#, ~, ^)
+setopt NUMERIC_GLOB_SORT    # Sort numeric filenames naturally (1, 2, 10 instead of 1, 10, 2)
+setopt COMPLETE_IN_WORD     # Complete from both ends of a word
+setopt MAGIC_EQUAL_SUBST    # Perform file completion after 'prefix=' expressions
 
-# unsetopt beep extendedglob nomatch notify
+# Terminal & Process Control
+setopt NO_BEEP              # Mute all terminal audio bells
+setopt NOTIFY               # Report status of background jobs immediately
+setopt LONG_LIST_JOBS       # List jobs in the long format by default
+setopt NO_BG_NICE           # Run background jobs at full CPU priority
+setopt CORRECT              # Suggest spell corrections for commands
 
-export PROMPT='%# '
-export RPROMPT=' %(?..%? )%~ %B%m%b'
+# Load the line-editor search widgets
+autoload -Uz up-line-or-beginning-search down-line-or-beginning-search
+zle -N up-line-or-beginning-search
+zle -N down-line-or-beginning-search
+# Standard Up / Down arrow keys
+bindkey '^[[A' up-line-or-beginning-search
+bindkey '^[[B' down-line-or-beginning-search
+# Application keypad mode escape sequences (xterm / Ghostty / iTerm / tmux)
+bindkey '^[OA' up-line-or-beginning-search
+bindkey '^[OB' down-line-or-beginning-search
 
-# setopt nohup  # do not SIGHUP background processes when shell exits
+# -------- finished audit here
 
 custom_functions=~/dot-configs/zsh/functions
 if [[ -d $custom_functions ]]; then
@@ -99,8 +109,15 @@ for comp in /etc/bash_completion.d/(p4|g4d|hgd|jjd)(N); do
   source "$comp" 2>/dev/null
 done
 
-zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
-zstyle ':completion:*' menu select=1
+if command -v dircolors >/dev/null 2>&1; then
+  eval "$(dircolors -b)"
+elif command -v gdircolors >/dev/null 2>&1; then
+  # Homebrew coreutils on macOS
+  eval "$(gdircolors -b)"
+fi
+zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
+
+zstyle ':completion:*' menu select
 # do not suggest ~root and ~your_username alongside standard local directories.
 zstyle ':completion::complete:cd::' tag-order '! users' -
 zstyle ':completion::complete:-command-::' tag-order '! users' -
@@ -153,87 +170,42 @@ bindkey "^[[1;5C" forward-word     # Ctrl + Right (if preferred)
 # completion in the middle of a line
 bindkey '^i' expand-or-complete-prefix
 
-# unbind
-bindkey -r main '^['
-
 # make word-breaking more useful for editing paths
 autoload select-word-style
 select-word-style bash
 
-# ==============================================================================
-# 🔌 AUTOMATED PLUGIN MANAGEMENT & CONFIGURATION ORDER
-# ==============================================================================
-# Why this setup is the best path forward for a native Jujutsu (jj) setup:
-# 1. Updatable: You can run `update-plugins` at any time to pull down upstream fixes.
-# 2. Perfect for jj: Your dotfiles repository remains 100% pure configuration text.
-#    jj never sees third-party .git tracking files, avoiding repo tree corruption.
-# 3. Zero-Touch: When you log into a brand new computer, you just clone your jj repo
-#    and run 'stow'. The first time you open a terminal, it builds itself.
-# ==============================================================================
-
-PLUGIN_DIR=$HOME/.local/share/zsh-plugins
-ensure_dir $PLUGIN_DIR
-
-# 1. BOOTSTRAP: Automatically clone external plugins & themes if missing
-if [ ! -d $PLUGIN_DIR/zsh-syntax-highlighting ]; then
-    echo "📥 Cloning zsh-syntax-highlighting for the first time..."
-    git clone --depth=1 --shallow-submodules https://github.com/zsh-users/zsh-syntax-highlighting.git $PLUGIN_DIR/zsh-syntax-highlighting
+if command -v fzf &> /dev/null; then
+  source <(fzf --zsh)
 fi
 
-if [ ! -d $PLUGIN_DIR/powerlevel10k ]; then
-    echo "📥 Cloning powerlevel10k theme..."
-    git clone --depth=1 --shallow-submodules https://github.com/romkatv/powerlevel10k.git $PLUGIN_DIR/powerlevel10k
+if [ -f $PLUGIN_DIR/powerlevel10k/powerlevel10k.zsh-theme ]; then
+  source $PLUGIN_DIR/powerlevel10k/powerlevel10k.zsh-theme
 fi
 
-# 2. SOURCING SEQUENCE: Order matters to keep hooks from stomping on each other
-
-# [Step B] Load Powerlevel10k Configuration & Theme Engine (EARLY)
-# Initialization code that may require console input (password prompts, [y/n]
-# confirmations, etc.) must go above this block; everything else may go below.
-if [[ -r "$XDG_CACHE_HOME/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
-  source "$XDG_CACHE_HOME/p10k-instant-prompt-${(%):-%n}.zsh"
+# zsh-syntax-highlighting and p10K have to be last
+if [ -f $PLUGIN_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]; then
+  source $PLUGIN_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 fi
 
-# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 if [[ -f ~/dot-configs/public/zsh/p10k.zsh ]]; then
   source ~/dot-configs/public/zsh/p10k.zsh
-  setopt transient_rprompt
 fi
 
-# Source the theme file
-if [ -f $PLUGIN_DIR/powerlevel10k/powerlevel10k.zsh-theme ]; then
-    source $PLUGIN_DIR/powerlevel10k/powerlevel10k.zsh-theme
-fi
-
-# [Step C] Load Intermediate Third-Party zsh Plugins
-
-# [Step D] Load FZF (Modern Dynamic Method)
-if command -v fzf &> /dev/null; then
-    source <(fzf --zsh)
-fi
-
-# [Step E] Load Syntax Highlighting (ALWAYS ABSOLUTELY LAST)
-if [ -f $PLUGIN_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]; then
-    source $PLUGIN_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
-fi
-
-
-# 3. AUTOMATED UPDATES: Pull downstream updates cleanly without polluting jj
 update-plugins() {
-    if [ ! -d $PLUGIN_DIR ]; then
-        echo "❌ No plugins found at $PLUGIN_DIR"
-        return 1
+  if [ ! -d $PLUGIN_DIR ]; then
+    echo "❌ No plugins found at $PLUGIN_DIR"
+    return 1
+  fi
+
+  echo "🔄 Checking for Zsh plugin/theme updates..."
+
+  for repo in $PLUGIN_DIR/*/; do
+    if [ -d $repo/.git ]; then
+      local repo_name=$(basename $repo)
+      echo -e "\n📦 Updating \033[1;34m${repo_name}\033[0m..."
+      (cd $repo && git pull --rebase)
     fi
+  done
 
-    echo "🔄 Checking for Zsh plugin/theme updates..."
-
-    for repo in $PLUGIN_DIR/*/; do
-        if [ -d $repo/.git ]; then
-            local repo_name=$(basename $repo)
-            echo -e "\n📦 Updating \033[1;34m${repo_name}\033[0m..."
-            (cd $repo && git pull --rebase)
-        fi
-    done
-
-    echo -e "\n✅ All modules updated! Restart your terminal or run: source ~/.zshrc"
+  echo -e "\n✅ All modules updated! Restart your terminal or run: source ~/.zshrc"
 }
