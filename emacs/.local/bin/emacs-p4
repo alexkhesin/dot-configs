@@ -1,0 +1,2 @@
+#!/bin/sh
+$(dirname $0)/emacs-connect emacs.p4 -t -e "(find-file \"$1\")"
