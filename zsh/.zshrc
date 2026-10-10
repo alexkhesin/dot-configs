@@ -72,18 +72,18 @@ bindkey '^[[B' down-line-or-beginning-search
 bindkey '^[OA' up-line-or-beginning-search
 bindkey '^[OB' down-line-or-beginning-search
 
-# -------- finished audit here
-
-custom_functions=~/dot-configs/zsh/functions
-if [[ -d $custom_functions ]]; then
-  fpath=($custom_functions $fpath)
-  # compinit will load all the _ prefixed functions, because it assumes that
-  # they are for completions. This will lazy-load the rest.
-  #
-  # (:t) is like basename, so it enumerates all filenames found in this
-  # location. So the filenames must correspond to function names.
-  autoload -U $custom_functions/*(:t)
-fi
+for custom_functions in ~/dot-configs/zsh/functions \
+                            ~/dot-configs/public/zsh/functions; do
+  if [[ -d $custom_functions ]]; then
+    fpath=($custom_functions $fpath)
+    # compinit will load all the _ prefixed functions, because it assumes that
+    # they are for completions. This will lazy-load the rest.
+    #
+    # (:t) is like basename, so it enumerates all filenames found in this
+    # location. So the filenames must correspond to function names.
+    autoload -Uz $custom_functions/*(:t)
+  fi
+done
 
 autoload -Uz compinit
 
@@ -191,21 +191,6 @@ if [[ -f ~/dot-configs/public/zsh/p10k.zsh ]]; then
   source ~/dot-configs/public/zsh/p10k.zsh
 fi
 
-update-plugins() {
-  if [ ! -d $PLUGIN_DIR ]; then
-    echo "❌ No plugins found at $PLUGIN_DIR"
-    return 1
-  fi
-
-  echo "🔄 Checking for Zsh plugin/theme updates..."
-
-  for repo in $PLUGIN_DIR/*/; do
-    if [ -d $repo/.git ]; then
-      local repo_name=$(basename $repo)
-      echo -e "\n📦 Updating \033[1;34m${repo_name}\033[0m..."
-      (cd $repo && git pull --rebase)
-    fi
-  done
-
-  echo -e "\n✅ All modules updated! Restart your terminal or run: source ~/.zshrc"
-}
+# Prevent duplicates in the path array, should be done after all PATH
+# modifications have finished.
+typeset -U path

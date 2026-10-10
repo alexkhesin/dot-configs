@@ -1,5 +1,6 @@
 aliases
 p10k.zsh
+functions
 \.DS_Store$
 \.git
 .+~            # emacs backup files

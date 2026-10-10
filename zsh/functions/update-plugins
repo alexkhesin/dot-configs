@@ -1,0 +1,18 @@
+# meant to work with PLUGIN_DIR from my .zshrc
+
+if [ ! -d $PLUGIN_DIR ]; then
+  echo "❌ No plugins found at $PLUGIN_DIR"
+  return 1
+fi
+
+echo "🔄 Checking for Zsh plugin/theme updates..."
+
+for repo in $PLUGIN_DIR/*/; do
+  if [ -d $repo/.git ]; then
+    local repo_name=$(basename $repo)
+    echo -e "\n📦 Updating \033[1;34m${repo_name}\033[0m..."
+    (cd $repo && git pull --rebase)
+  fi
+done
+
+echo -e "\n✅ All modules updated! Restart your terminal or run: source ~/.zshrc"

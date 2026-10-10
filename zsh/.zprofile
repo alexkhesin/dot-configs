@@ -6,12 +6,6 @@ export XDG_CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.cache}"
 # Unofficial name for the common binary directory
 export XDG_BIN_HOME="${XDG_BIN_HOME:-$HOME/.local/bin}"
 
-ensure_dir() {
-  for dir in "$@"; do
-    [[ ! -d "$dir" ]] && mkdir -p "$dir"
-  done
-}
-
 # Ensure required XDG directories exist
 ensure_dir "$XDG_CONFIG_HOME" "$XDG_STATE_HOME" "$XDG_DATA_HOME"
 ensure_dir "$XDG_CACHE_HOME" "$XDG_BIN_HOME"
@@ -22,9 +16,6 @@ export CLICOLOR=1  # Enable color ls output on MacOS, and most modern tools
 
 # Otherwise corp default zshrc sets up default config that I do not like
 export google_zsh_flysolo="yes"
-
-# Prevent duplicates in the path array
-typeset -U path
 
 path=($XDG_BIN_HOME $path)
 
