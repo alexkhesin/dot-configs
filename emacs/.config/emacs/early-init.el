@@ -1,8 +1,22 @@
-;;; early-init.el --- Early initialization -*- lexical-binding: t; -*-
+;; -*- lexical-binding: t; -*-
 
-;; Effectively disable GC during startup. GCMH in init.el re-enables it.
+(when (< emacs-major-version 30) (error "Requires GNU Emacs 30 or above"))
+
 (setq gc-cons-threshold most-positive-fixnum
       gc-cons-percentage 0.6)
+
+;; Effectively disable GC during startup. GCMH in init.el re-enables it.
+(let ((orig-threshold  gc-cons-threshold)
+      (orig-percentage gc-cons-percentage))
+  (setq gc-cons-threshold  most-positive-fixnum
+        gc-cons-percentage 0.6)
+  (add-hook 'emacs-startup-hook
+            (lambda ()
+              (setq gc-cons-percentage orig-percentage)
+              ;; GCMH manages the threshold; only restore if it failed to load,
+              ;; so that GC does not stay disabled for the entire session.
+              (unless (bound-and-true-p gcmh-mode)
+                (setq gc-cons-threshold orig-threshold)))))
 
 ;; Prevent package.el from activating packages before init.el evaluates
 (setq package-enable-at-startup nil)
@@ -38,7 +52,7 @@
   ; can be turned on separately with (delete-selection-mode 1).
 
   ;; !!! do not try it because ssh-from-work-via-X11 emacs will still use X11,
-  ; i.e. not mac-native interpretations of Optoion and Command keys. Unless can
+  ; i.e. not mac-native interpretations of Option and Command keys. Unless can
   ; change that too.
   ; (cua-selection-mode t)
   ;
@@ -51,5 +65,8 @@
   (push '(menu-bar-lines . 0) default-frame-alist))
 (push '(tool-bar-lines . 0) default-frame-alist)
 (push '(vertical-scroll-bars . nil) default-frame-alist)
-(push '(width . 80) default-frame-alist)
 (setq inhibit-startup-message t)
+
+(defvar ak-frame-width 80
+  "Standard frame width in columns, used for new frames and by `ak-single' etc.")
+(push (cons 'width ak-frame-width) default-frame-alist)

@@ -1,9 +1,4 @@
-;;; init.el --- Emacs 30.2 Configuration -*- lexical-binding: t; -*-
-
-;; Local Overrides
-(let ((local-config (expand-file-name "local.el" user-emacs-directory)))
-  (when (file-exists-p local-config)
-    (load-file local-config)))
+;; -*- lexical-binding: t; -*-
 
 ;; Platfrom detection
 (defconst ak-mac-p (eq system-type 'darwin))
@@ -23,6 +18,13 @@
 (require 'use-package)
 (setq use-package-always-ensure t
       use-package-expand-minimally t)
+
+;; Some packages store files next to init.el. Make it stop.
+(use-package no-littering
+  :demand t
+  :init
+  (setq no-littering-etc-directory (expand-file-name "etc/" ak-state-dir)
+        no-littering-var-directory ak-state-dir))
 
 ;; Automatic Garbage Collection Management (gcmh)
 (use-package gcmh
@@ -48,11 +50,16 @@
 (setq truncate-partial-width-windows nil)       ; Wrap horizontally-split windows
 (setq line-number-mode t)
 (setq column-number-mode t)                     ; Show column numbers in mode line
+(setq split-height-threshold nil)
 (blink-cursor-mode 1)
 (show-paren-mode 1)
 (global-auto-revert-mode 1)
 (winner-mode 1)  ; C-c + <left/right> to get back to previous window layout
 (cua-mode 1)
+
+;; Keep Customize out of init.el
+(setq custom-file (expand-file-name "custom.el" ak-state-dir))
+(load custom-file 'noerror 'nomessage)
 
 ;; Strips trailing whitespace across all visited files on save
 (add-hook 'before-save-hook #'delete-trailing-whitespace)
@@ -60,10 +67,6 @@
 ;; Window navigation
 (windmove-default-keybindings 'meta)  ; navigate windows with M-<arrows>
 (setq windmove-wrap-around t)
-
-;; Which-func: show in title bar, remove from mode line
-(which-function-mode 1)
-(setq mode-line-format (delete (assoc 'which-function-mode mode-line-format) mode-line-format))
 
 ;; Font configuration (handles standalone GUI and emacsclient daemon frames)
 (defun ak-apply-frame-fonts (&optional frame)
@@ -99,11 +102,12 @@
   :config
   (load-theme 'zenburn t))
 
-(use-package undo-tree
-  :diminish undo-tree-mode
-  :init
-  (global-undo-tree-mode 1)
-  :bind (([(control shift z)] . redo)))
+(global-set-key [(control shift z)] #'undo-redo) ; with cua-mode, C-z isundo
+(use-package vundo
+  :bind ("C-x u" . vundo)
+  :config
+  ;; Optional: Use prettier unicode characters to draw the tree lines
+  (setq vundo-glyph-alist vundo-unicode-symbols))
 
 (use-package recentf
   :ensure nil
@@ -134,14 +138,30 @@
 ;; Dired navigation (C-x C-j to jump to current directory)
 (use-package dired-x
   :ensure nil
-  :bind (("C-x C-j" . dired-jump)))
+  :after dired
+  :demand t
+  :bind ("C-x C-j" . dired-jump))
 
 ;; Git interface & change navigation
 (use-package magit
   :bind (("C-x C-z" . magit-status)))
 
+(use-package diff-hl
+  :hook ((magit-pre-refresh  . diff-hl-magit-pre-refresh)
+         (magit-post-refresh . diff-hl-magit-post-refresh)
+         (dired-mode         . diff-hl-dired-mode))   ; optional: markers in Dired too
+  :init
+  (global-diff-hl-mode 1)
+  (diff-hl-flydiff-mode 1))
+
 (use-package goto-chg
   :bind (("C-x C-/" . goto-last-change)))
+
+(use-package jsonrpc
+  :demand t)
+
+(use-package abbrev :ensure nil :diminish)  ; no idea who turns it on
+(use-package eldoc  :ensure nil :diminish)  ; no idea who turns it on
 
 ;; ----------------------------------------------------------------------------
 ;; Completion & Editing (Company + Ido)
@@ -203,6 +223,7 @@
 
 ;; Spelling
 (use-package spell-fu
+  :disabled  ;; let me see if I can make hunspell work
   :ensure t
   :hook (prog-mode . spell-fu-mode)
   :config
@@ -217,6 +238,28 @@
           font-lock-string-face))
   ;; 3. Enable camelCase and snake_case sub-word splitting
   (setq spell-fu-subword-mode t))
+
+;; sudo apt-get install hunspell hunspell-en-us
+;; sudo port install hunspell hunspell-en_US   (MacPorts)
+(use-package ispell
+  :ensure nil
+  :custom
+  (ispell-program-name (executable-find "hunspell"))
+  (ispell-dictionary "american"))
+
+(use-package flyspell
+  :ensure nil
+  :diminish
+  :hook ((text-mode . flyspell-mode)           ; prose: text, markdown, org
+         (prog-mode . flyspell-prog-mode))     ; code: comments and strings only
+  :bind (:map flyspell-mode-map                ; rebind from C-. to C-'
+              ("C-."  . nil)
+              ("C-'"  . flyspell-auto-correct-word))
+  :custom
+  (flyspell-persistent-highlight nil)          ; only highlight the last error found
+  (flyspell-issue-welcome-flag nil)
+  (flyspell-issue-message-flag nil)
+  (flyspell-duplicate-distance 0))
 
 ;; Programming hooks
 (add-hook 'prog-mode-hook
@@ -260,15 +303,60 @@
 (use-package graphviz-dot-mode
   :mode "\\.dot\\'")
 
+(defun ak-org-setup ()
+  "Prose-friendly display for Org buffers."
+  (variable-pitch-mode 1)
+  (visual-line-mode 1)
+  (diminish 'visual-line-mode)
+  (diminish 'buffer-face-mode))        ; the minor mode variable-pitch-mode enables
+
 (use-package org
   :ensure nil
+  :hook (org-mode . ak-org-setup)
+  :bind (("C-c l" . org-store-link)
+         ("C-c a" . org-agenda)
+         ("C-c b" . org-switchb))
   :custom-face
   (org-table ((t (:inherit fixed-pitch))))
-  :bind (("\C-cl" . org-store-link)
-         ("\C-ca" . org-agenda)
-         ("\C-cb" . org-switchb))
   :custom
-  (org-agenda-files '("~/orgmode")))
+  (org-directory "~/orgmode")          ; old value was a one-element list, which Org doesn't expect
+  (org-agenda-files '("~/orgmode"))
+  ;; Must be set before Org loads, which :custom guarantees here
+  (org-replace-disputed-keys t)
+  (org-support-shift-select t)         ; shift-arrow selection, matters with cua-mode
+  (org-return-follows-link t)
+  (org-hide-leading-stars t)
+  (org-pretty-entities t)
+  (org-hide-emphasis-markers t)
+  ;; Corp short links; delete any you no longer use
+  (org-link-abbrev-alist '(("cl" . "http://cl/%s")
+                           ("b"  . "http://b/%s")
+                           ("go" . "http://go/%s")))
+  :config
+  ;; Show "-" list markers as bullets (from zzamboni.org/post/beautifying-org-mode-in-emacs/)
+  (font-lock-add-keywords
+   'org-mode
+   '(("^ *\\([-]\\) "
+      (0 (prog1 () (compose-region (match-beginning 1) (match-end 1) "•")))))))
+
+(use-package tex
+  :ensure auctex                       ; the package is auctex, the feature is tex
+  :defer t
+  :hook ((LaTeX-mode . visual-line-mode)   ; wrap long paragraphs
+         (LaTeX-mode . LaTeX-math-mode)    ; ` prefix inserts math symbols
+         (LaTeX-mode . turn-on-reftex))    ; C-c ( / C-c [ for labels and citations
+  :custom
+  ;; from your old config
+  (TeX-auto-save t)
+  (TeX-parse-self t)
+  (LaTeX-includegraphics-read-file #'LaTeX-includegraphics-read-file-relative)
+  (TeX-master t)                       ; single-file documents; use nil for multi-file projects
+  ;; additions
+  (TeX-save-query nil)                 ; save before compiling without asking
+  (TeX-source-correlate-mode t)        ; SyncTeX: jump between source and PDF
+  (TeX-source-correlate-start-server t)
+  (TeX-error-overview-open-after-TeX-run t)
+  (reftex-plug-into-AUCTeX t))
 
 (use-package org-bullets
   :hook (org-mode . org-bullets-mode))
@@ -278,6 +366,22 @@
   :hook (org-mode . real-auto-save-mode)
   :custom
   (real-auto-save-interval 30))
+
+(use-package which-func
+  :ensure nil
+  :custom
+  (which-func-unknown "")
+  (frame-title-format
+   '("%b" (:eval (let ((fn (and (boundp 'which-func-table)
+                                (hash-table-p which-func-table)
+                                (gethash (selected-window) which-func-table))))
+                   (if (and (stringp fn) (not (string-empty-p fn)))
+                       (concat " [" fn "]")
+                     "")))))
+  :config
+  (which-function-mode 1)
+  (setq mode-line-misc-info
+        (assq-delete-all 'which-function-mode mode-line-misc-info)))
 
 ;; ----------------------------------------------------------------------------
 ;; Custom Navigation & Window Utilities
@@ -294,8 +398,6 @@
   (cond ((looking-at "\\s\(") (forward-list 1) (backward-char 1))
         ((looking-at "\\s\)") (forward-char 1) (backward-list 1))
         (t (self-insert-command (or arg 1)))))
-
-(setq ak-frame-width 80)
 
 (defun ak-single ()
   (interactive)
@@ -327,19 +429,6 @@
 (global-set-key "\M-g" #'goto-line)
 (global-set-key [(control tab)] #'other-window)
 (global-set-key [(control shift iso-lefttab)] (lambda () (interactive) (other-window -1)))
-(custom-set-variables
- ;; custom-set-variables was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- '(package-selected-packages
-   '(auto-package-update company company-quickhelp diminish flycheck gcmh
-			 goto-chg graphviz-dot-mode magit
-			 markdown-mode org-bullets real-auto-save
-			 undo-tree zenburn-theme)))
-(custom-set-faces
- ;; custom-set-faces was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- )
+
+;; Local additions
+(load (expand-file-name "local" "~/dot-configs/emacs.d") 'noerror 'nomessage)

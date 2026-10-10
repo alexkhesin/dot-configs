@@ -16,19 +16,14 @@ fi
 if [ "$(uname -s)" = "Darwin" ]; then
   emacs=/Applications/Emacs.app/Contents/MacOS/Emacs
   emacsclient=/Applications/Emacs.app/Contents/MacOS/bin/emacsclient
-elif [ -e /usr/bin/google-emacs ]; then
-   emacs=/usr/bin/google-emacs
-   emacsclient=/usr/bin/emacsclient.google-emacs
-elif [ -e /usr/local/bin/emacs ]; then
-   emacs=/usr/local/bin/emacs
-   emacsclient=/usr/local/bin/emacsclient
 else
   emacs=/usr/bin/emacs
   emacsclient=/usr/bin/emacsclient
 fi
 
 # launch daemon if not running already
-if [ ! -e "${TMPDIR:-/tmp}/emacs$UID/$name" ]; then
+if ! "$emacsclient" --socket-name="$name" --eval t >/dev/null 2>&1; then
+# if [ ! -e "${TMPDIR:-/tmp}/emacs$UID/$name" ]; then
   "$emacs" --daemon="$name"
 fi
 
@@ -43,6 +38,7 @@ if [ "$(uname -s)" = "Linux" ]; then
   xauth list | while read dpy; do
     $emacsclient -s "$name" -e "(shell-command \"xauth add $dpy\")" >/dev/null &
   done
+  wait
 fi
 
 # And finally run emacs-client
