@@ -2,24 +2,18 @@
 
 (when (< emacs-major-version 30) (error "Requires GNU Emacs 30 or above"))
 
-(setq gc-cons-threshold most-positive-fixnum
-      gc-cons-percentage 0.6)
-
-;; Effectively disable GC during startup. GCMH in init.el re-enables it.
-(let ((orig-threshold  gc-cons-threshold)
-      (orig-percentage gc-cons-percentage))
-  (setq gc-cons-threshold  most-positive-fixnum
-        gc-cons-percentage 0.6)
+;; Effectively disable GC during startup. gcmh (init.el) takes over afterwards.
+(let ((orig gc-cons-threshold))
+  (setq gc-cons-threshold most-positive-fixnum)
   (add-hook 'emacs-startup-hook
             (lambda ()
-              (setq gc-cons-percentage orig-percentage)
-              ;; GCMH manages the threshold; only restore if it failed to load,
-              ;; so that GC does not stay disabled for the entire session.
+              ;; Only restore if gcmh didn't load, so GC isn't off for the whole session.
               (unless (bound-and-true-p gcmh-mode)
-                (setq gc-cons-threshold orig-threshold)))))
+                (setq gc-cons-threshold orig)))))
 
 ;; Prevent package.el from activating packages before init.el evaluates
 (setq package-enable-at-startup nil)
+(setq package-native-compile t)
 
 ; Put various tmp files (ie #foo#) in one place, instead scattered of all over
 ; the file system.  Don't use /tmp as it gets wiped on restarts on many systems.
@@ -30,20 +24,27 @@
 
 (make-directory ak-state-dir t)
 
-;; Backups, Auto-saves & Auto-save-list (XDG state tmp dir)
-(setq backup-directory-alist         `((".*" . ,ak-state-dir))
-      auto-save-file-name-transforms `((".*" ,ak-state-dir t))
-      auto-save-list-file-prefix     (expand-file-name ".saves-" ak-state-dir))
+;; Redirect native-compilation cache (.eln files) to XDG directory
+(when (fboundp 'startup-redirect-eln-cache)
+  (startup-redirect-eln-cache (expand-file-name "eln-cache/" ak-state-dir))
+  ;; Child Emacs processes (Flycheck's checker, trampoline compiles) start with
+  ;; -Q and never read this file, so pass them the redirected load path.
+  (when (bound-and-true-p native-comp-eln-load-path)
+    (setenv "EMACSNATIVELOADPATH"
+            (mapconcat #'identity native-comp-eln-load-path path-separator))))
+
+;; startup-redirect-eln-cache above did not affect trampolines, move them too.
+(when (native-comp-available-p)
+  (let ((dir (expand-file-name comp-native-version-dir
+                               (expand-file-name "eln-cache/" ak-state-dir))))
+    (make-directory dir t)
+    (setq native-comp-enable-subr-trampolines dir)))
 
 ;; ELPA packages and GPG keyring locations (XDG state)
 (setq package-user-dir (expand-file-name "elpa/" ak-state-dir)
       package-gnupg-dir (expand-file-name "gnupg/" ak-state-dir))
 
-;; Redirect native-compilation cache (.eln files) to XDG directory
-(when (fboundp 'startup-redirect-eln-cache)
-  (startup-redirect-eln-cache (expand-file-name "eln-cache/" ak-state-dir)))
-
-;; macOS Modifiers
+;; MacOS Modifiers
 (when (eq system-type 'darwin)
   ; If you want a mac-native behavior (Command-c/v/x for copy-paste, uncomment
   ; (cua-selection-mode t) below, and kill the progn that follows.  Emacs 24

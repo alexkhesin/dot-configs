@@ -16,6 +16,7 @@
 (package-initialize)
 ;; Built-in use-package settings
 (require 'use-package)
+(require 'cl-lib)  ;; Common List utilities needed for other cl-*` functions
 (setq use-package-always-ensure t
       use-package-expand-minimally t)
 
@@ -24,9 +25,12 @@
   :demand t
   :init
   (setq no-littering-etc-directory (expand-file-name "etc/" ak-state-dir)
-        no-littering-var-directory ak-state-dir))
+        no-littering-var-directory ak-state-dir)
+  :config
+  (no-littering-theme-backups))
 
-;; Automatic Garbage Collection Management (gcmh)
+;; Minimize GC interference with user activity: sets high GC threshold during
+;; use and drops it down when idling.
 (use-package gcmh
   :demand t
   :config
@@ -46,23 +50,28 @@
 ;; ----------------------------------------------------------------------------
 (setq use-short-answers t)                      ; Modern (fset 'yes-or-no-p 'y-or-n-p)
 (setq compilation-ask-about-save nil)           ; Save buffers without prompting
+(setq truncate-partial-width-windows nil)       ; Wrap horizontally-split
 (setq enable-recursive-minibuffers t)
-(setq truncate-partial-width-windows nil)       ; Wrap horizontally-split windows
-(setq line-number-mode t)
-(setq column-number-mode t)                     ; Show column numbers in mode line
+;; Given enable-recursive-minibuffers, a new minibuffer command can be started
+;; while another one is still waiting for input (e.g. find-file). The nested
+;; prompt looks identical to the outer one, so it's easy to lose track of how
+;; many are open. This mode prefixes the prompt with the nesting depth
+;; (something like "[2]"), to indicate there's an unfinished prompt underneath.
+(minibuffer-depth-indicate-mode 1)
+
 (setq split-height-threshold nil)
+(column-number-mode 1)                       ; Show column numbers in mode line
+(line-number-mode 1)
 (blink-cursor-mode 1)
 (show-paren-mode 1)
 (global-auto-revert-mode 1)
 (winner-mode 1)  ; C-c + <left/right> to get back to previous window layout
+(repeat-mode 1)  ; M-g n, then n/p to repeat
 (cua-mode 1)
 
 ;; Keep Customize out of init.el
 (setq custom-file (expand-file-name "custom.el" ak-state-dir))
 (load custom-file 'noerror 'nomessage)
-
-;; Strips trailing whitespace across all visited files on save
-(add-hook 'before-save-hook #'delete-trailing-whitespace)
 
 ;; Window navigation
 (windmove-default-keybindings 'meta)  ; navigate windows with M-<arrows>
@@ -90,8 +99,7 @@
   (savehist-mode 1)
   :custom
   (history-delete-duplicates t)
-  (savehist-save-minibuffer-history t)
-  (savehist-file (expand-file-name "history" ak-state-dir)))
+  (savehist-save-minibuffer-history t))
 
 (use-package which-key
   :ensure nil ; Built-in in Emacs 30
@@ -102,7 +110,7 @@
   :config
   (load-theme 'zenburn t))
 
-(global-set-key [(control shift z)] #'undo-redo) ; with cua-mode, C-z isundo
+(keymap-global-set "C-S-z" #'undo-redo) ; with cua-mode, C-z is undo
 (use-package vundo
   :bind ("C-x u" . vundo)
   :config
@@ -113,7 +121,6 @@
   :ensure nil
   :init (recentf-mode 1)
   :custom
-  (recentf-save-file (expand-file-name "recentf" ak-state-dir))
   (recentf-max-saved-items 500)
   (recentf-max-menu-items 60)
   :bind (([(meta f12)] . recentf-open-files)))
@@ -157,22 +164,81 @@
 (use-package goto-chg
   :bind (("C-x C-/" . goto-last-change)))
 
-(use-package jsonrpc
-  :demand t)
-
 (use-package abbrev :ensure nil :diminish)  ; no idea who turns it on
 (use-package eldoc  :ensure nil :diminish)  ; no idea who turns it on
 
 ;; ----------------------------------------------------------------------------
 ;; Completion & Editing (Company + Ido)
 ;; ----------------------------------------------------------------------------
-(use-package ido
-  :ensure nil
+;; (use-package ido
+;;   :ensure nil
+;;   :config
+;;   (ido-mode 'buffers)
+;;   (setq ido-enable-flex-matching t
+;;         ido-default-file-method 'selected-window
+;;         ido-default-buffer-method 'selected-window))
+
+;; Modern (as of 2026) set of packages to make completions look good. Vertico
+;; controls how candidates are displayed and navigated. Orderless controls which
+;; candidates match your input. Marginalia controls what extra information
+;; accompanies each candidate. You can use any one without the others, but they
+;; complement each other. For example, Vertico alone with default prefix
+;; matching feels limited, and Orderless alone with the stock *Completions*
+;; buffer works but looks plain.
+
+;; 1. Vertico: The Vertical Minibuffer UI
+(use-package vertico
+  :init
+  (vertico-mode 1)
   :config
-  (ido-mode 'buffers)
-  (setq ido-enable-flex-matching t
-        ido-default-file-method 'selected-window
-        ido-default-buffer-method 'selected-window))
+  ;; Optional: Tweak minibuffer behavior
+  (setq vertico-resize t          ; Grow and shrink minibuffer dynamically
+        vertico-cycle t))         ; Go back to top when hitting the bottom
+
+; get Jinx completions into Vertico
+(with-eval-after-load 'vertico
+  (require 'vertico-multiform)
+  (add-to-list 'vertico-multiform-categories
+               '(jinx grid (vertico-grid-annotate . 20) (vertico-count . 4)))
+  (vertico-multiform-mode))
+
+;; 2. Fuzzy/Component Matcher.
+;; Allows typing terms in any order, separated by spaces (e.g., "init el"
+;; matches "init.el")
+(use-package orderless
+  :custom
+  (completion-styles '(orderless basic))
+  (completion-category-overrides '((file (styles basic partial-completion)))))
+
+;; 3. Rich descriptions in the minibuffer.
+;; Adds file permissions, sizes, and command descriptions in the margins
+(use-package marginalia
+  :bind (:map minibuffer-local-map
+         ("M-A" . marginalia-cycle)) ; Toggle description styles dynamically
+  :init
+  (marginalia-mode))
+
+;; 4. Enhanced Search and Navigation Commands
+;; This provides the "Swiper-like" experience for Vertico
+;; Claude version
+;; (use-package consult
+;;   :bind (("C-x b" . consult-buffer)       ; replaces switch-to-buffer
+;;          ("M-s l" . consult-line)
+;;          ("M-s r" . consult-ripgrep)
+;;          ("M-g g" . consult-goto-line)    ; works now that M-g is a prefix again
+;;          ("M-g i" . consult-imenu)
+;;          ("M-y"   . consult-yank-pop)))
+(use-package consult
+  :disabled
+  :bind (;; Replace standard buffer/file switching with rich preview versions
+         ("C-x b" . consult-buffer)                ; Enhanced buffer list
+         ("M-y" . consult-yank-pop)                ; Interactive kill-ring (paste history)
+
+         ;; Search tools (The Ivy/Swiper equivalents)
+         ("C-s" . consult-line)                    ; Interactive line search in current buffer
+         ("M-s r" . consult-ripgrep)               ; Search through project using ripgrep
+         ("M-g g" . consult-goto-line))            ; Go to line with live preview
+)
 
 ; Delete dabbrev matches that are the same as capf.  We know capf matches
 ; include arguments (e.g. "foo(var1)" for capf vs just "foo" for dabbrev);
@@ -221,72 +287,75 @@
   :config
   (company-quickhelp-mode 1))
 
-;; Spelling
-(use-package spell-fu
-  :disabled  ;; let me see if I can make hunspell work
-  :ensure t
-  :hook (prog-mode . spell-fu-mode)
-  :config
-  ;; 1. Use XDG Cache Directory (~/.cache/spell-fu/)
-  (require 'xdg)
-  (setq spell-fu-directory
-        (expand-file-name "spell-fu" (xdg-cache-home)))
-  ;; 2. Restrict checks strictly to code comments and strings
-  (setq spell-fu-faces-include
-        '(font-lock-comment-face
-          font-lock-doc-face
-          font-lock-string-face))
-  ;; 3. Enable camelCase and snake_case sub-word splitting
-  (setq spell-fu-subword-mode t))
-
-;; sudo apt-get install hunspell hunspell-en-us
-;; sudo port install hunspell hunspell-en_US   (MacPorts)
-(use-package ispell
-  :ensure nil
-  :custom
-  (ispell-program-name (executable-find "hunspell"))
-  (ispell-dictionary "american"))
-
-(use-package flyspell
-  :ensure nil
+(use-package jinx
   :diminish
-  :hook ((text-mode . flyspell-mode)           ; prose: text, markdown, org
-         (prog-mode . flyspell-prog-mode))     ; code: comments and strings only
-  :bind (:map flyspell-mode-map                ; rebind from C-. to C-'
-              ("C-."  . nil)
-              ("C-'"  . flyspell-auto-correct-word))
+  :hook ((text-mode prog-mode) . ak-enable-jinx)
+  :bind (("M-$"   . jinx-correct)
+         ("C-M-$" . jinx-languages)
+         ;; M-$ is standard for jinx, but conflicts with system bindings for
+         ;; MacOS. C-' is what I am used to, but it conflicts with org-mode
+         ;; bindings. Installing it in jinx-mode-map makes it available in
+         ;; org-mode too, but overriding its own binding,
+         ;; org-cycle-agenda-files. I should find some other shortcut one day.
+         :map jinx-mode-map
+         ("C-'" . jinx-correct))
   :custom
-  (flyspell-persistent-highlight nil)          ; only highlight the last error found
-  (flyspell-issue-welcome-flag nil)
-  (flyspell-issue-message-flag nil)
-  (flyspell-duplicate-distance 0))
+  (jinx-languages "en_US"))
 
-;; Programming hooks
-(add-hook 'prog-mode-hook
-          (lambda ()
-            (setq tab-width 2
-                  indent-tabs-mode nil
-                  fill-column 80
-                  compilation-scroll-output t)
-            (turn-on-auto-fill)
-            (diminish 'auto-fill-function)
-            (subword-mode 1)
-            (diminish 'subword-mode)
-            (company-mode 1)
-            (local-set-key [tab] #'company-indent-or-complete-common)
-            (local-set-key (kbd "RET") #'newline-and-indent)
-            (local-set-key [C-f10] #'compile)
-            (local-set-key [M-down] #'next-error)
-            (local-set-key [M-up] (lambda () (interactive) (next-error -1)))))
+;; Get a message instead of an error if jinx is unavaialble
+(defun ak-enable-jinx ()
+  (with-demoted-errors "jinx: %S" (jinx-mode 1)))
 
-(add-hook 'css-mode-hook (lambda () (setq css-indent-offset 2)))
+;; Programming mode tweaks
+(setopt compilation-scroll-output t)
 
-(add-hook 'c-mode-common-hook
-          (lambda ()
-            (local-set-key (kbd "RET") #'c-context-line-break)
-            (local-set-key "\C-v" (lambda () (interactive)
-                                    (yank)
-                                    (c-indent-defun)))))
+(defun ak-prog-mode-setup ()
+  "Per-buffer settings for programming modes."
+  (setq-local tab-width 2
+              indent-tabs-mode nil
+              fill-column 80)
+  (turn-on-auto-fill)
+  (diminish 'auto-fill-function)
+  (subword-mode 1)
+  (diminish 'subword-mode)
+  (company-mode 1))
+(add-hook 'prog-mode-hook #'ak-prog-mode-setup)
+
+;; Bound once in the shared map. A mode's own map overrides prog-mode-map.
+(keymap-set prog-mode-map "<tab>"   #'company-indent-or-complete-common) ; temporary, until migrate away from company
+(keymap-set prog-mode-map "C-<f10>" #'compile)
+
+(defun ak-c-indent-after-paste (&rest _)
+  "Re-indent the surrounding defun after pasting in a CC Mode buffer."
+  (when (derived-mode-p 'c-mode 'c++-mode 'objc-mode 'java-mode)
+    (with-demoted-errors "c-indent-defun: %S"
+      (c-indent-defun))))
+(advice-add 'cua-paste :after #'ak-c-indent-after-paste)
+
+(with-eval-after-load 'cc-mode
+  (keymap-set c-mode-base-map "RET" #'c-context-line-break))
+
+(use-package css-mode
+  :ensure nil
+  :custom (css-indent-offset 2))
+
+;; Trim trailing whitespace only on lines I edited, everywhere except
+;; for Markdown, because in Markdown adding two or more spaces means <br>
+(use-package ws-butler
+  :diminish
+  :config
+  (dolist (mode '(markdown-mode gfm-mode))
+    (add-to-list 'ws-butler-global-exempt-modes mode))
+  (ws-butler-global-mode 1))
+
+;; Save visited Org files in place every 30s (built-in; replaces real-auto-save)
+(use-package files
+  :ensure nil
+  :custom
+  (auto-save-visited-interval 30)
+  (auto-save-visited-predicate (lambda () (derived-mode-p 'org-mode)))
+  :config
+  (auto-save-visited-mode 1))
 
 ;; ----------------------------------------------------------------------------
 ;; Languages & Formats (Markdown, Dot, Org)
@@ -318,6 +387,12 @@
          ("C-c b" . org-switchb))
   :custom-face
   (org-table ((t (:inherit fixed-pitch))))
+  (org-block ((t (:inherit fixed-pitch))))
+  (org-code ((t (:inherit (shadow fixed-pitch)))))
+  (org-verbatim ((t (:inherit (shadow fixed-pitch)))))
+  (org-meta-line ((t (:inherit (font-lock-comment-face fixed-pitch)))))
+  (org-checkbox ((t (:inherit fixed-pitch))))
+  (org-formula ((t (:inherit fixed-pitch))))
   :custom
   (org-directory "~/orgmode")          ; old value was a one-element list, which Org doesn't expect
   (org-agenda-files '("~/orgmode"))
@@ -331,13 +406,7 @@
   ;; Corp short links; delete any you no longer use
   (org-link-abbrev-alist '(("cl" . "http://cl/%s")
                            ("b"  . "http://b/%s")
-                           ("go" . "http://go/%s")))
-  :config
-  ;; Show "-" list markers as bullets (from zzamboni.org/post/beautifying-org-mode-in-emacs/)
-  (font-lock-add-keywords
-   'org-mode
-   '(("^ *\\([-]\\) "
-      (0 (prog1 () (compose-region (match-beginning 1) (match-end 1) "•")))))))
+                           ("go" . "http://go/%s"))))
 
 (use-package tex
   :ensure auctex                       ; the package is auctex, the feature is tex
@@ -358,14 +427,9 @@
   (TeX-error-overview-open-after-TeX-run t)
   (reftex-plug-into-AUCTeX t))
 
-(use-package org-bullets
-  :hook (org-mode . org-bullets-mode))
-
-(use-package real-auto-save
-  :diminish real-auto-save-mode
-  :hook (org-mode . real-auto-save-mode)
-  :custom
-  (real-auto-save-interval 30))
+(use-package org-modern
+  :hook ((org-mode . org-modern-mode)
+         (org-agenda-finalize . org-modern-agenda)))
 
 (use-package which-func
   :ensure nil
@@ -392,13 +456,6 @@
     (back-to-indentation)
     (if (= start (point)) (beginning-of-line))))
 
-(defun ak-match-paren (arg)
-  "Go to matching parenthesis or insert %."
-  (interactive "p")
-  (cond ((looking-at "\\s\(") (forward-list 1) (backward-char 1))
-        ((looking-at "\\s\)") (forward-char 1) (backward-list 1))
-        (t (self-insert-command (or arg 1)))))
-
 (defun ak-single ()
   (interactive)
   (delete-other-windows)
@@ -423,12 +480,23 @@
   (interactive)
   (set-frame-height (selected-frame) 65))
 
-(global-set-key "\C-a" #'chrisk-beginning-of-line)
-(global-set-key [home] #'chrisk-beginning-of-line)
-(global-set-key "%" #'ak-match-paren)
-(global-set-key "\M-g" #'goto-line)
-(global-set-key [(control tab)] #'other-window)
-(global-set-key [(control shift iso-lefttab)] (lambda () (interactive) (other-window -1)))
+(defun ak-match-paren (arg)
+  "Go to matching parenthesis or insert %."
+  (interactive "p")
+  (cond ((looking-at "\\s\(") (forward-list 1) (backward-char 1))
+        ((looking-at "\\s\)") (forward-char 1) (backward-list 1))
+        (t (self-insert-command (or arg 1)))))
+
+(defun ak-other-window-backward ()
+  (interactive)
+  (other-window -1))
+
+(keymap-global-set "C-a"    #'chrisk-beginning-of-line)
+(keymap-global-set "<home>" #'chrisk-beginning-of-line)
+(keymap-global-set "%"      #'ak-match-paren)
+(keymap-global-set "C-<tab>" #'other-window)
+(keymap-global-set "C-S-<iso-lefttab>" #'ak-other-window-backward) ; X11
+(keymap-global-set "C-S-<tab>"         #'ak-other-window-backward) ; macOS and others
 
 ;; Local additions
 (load (expand-file-name "local" "~/dot-configs/emacs.d") 'noerror 'nomessage)
