@@ -26,19 +26,7 @@
 
 ;; Redirect native-compilation cache (.eln files) to XDG directory
 (when (fboundp 'startup-redirect-eln-cache)
-  (startup-redirect-eln-cache (expand-file-name "eln-cache/" ak-state-dir))
-  ;; Child Emacs processes (Flycheck's checker, trampoline compiles) start with
-  ;; -Q and never read this file, so pass them the redirected load path.
-  (when (bound-and-true-p native-comp-eln-load-path)
-    (setenv "EMACSNATIVELOADPATH"
-            (mapconcat #'identity native-comp-eln-load-path path-separator))))
-
-;; startup-redirect-eln-cache above did not affect trampolines, move them too.
-(when (native-comp-available-p)
-  (let ((dir (expand-file-name comp-native-version-dir
-                               (expand-file-name "eln-cache/" ak-state-dir))))
-    (make-directory dir t)
-    (setq native-comp-enable-subr-trampolines dir)))
+  (startup-redirect-eln-cache (expand-file-name "eln-cache/" ak-state-dir)))
 
 ;; ELPA packages and GPG keyring locations (XDG state)
 (setq package-user-dir (expand-file-name "elpa/" ak-state-dir)
