@@ -60,7 +60,9 @@
 (minibuffer-depth-indicate-mode 1)
 
 (setq split-height-threshold nil)
-(column-number-mode 1)                       ; Show column numbers in mode line
+(setq-default indent-tabs-mode nil)   ; indent with spaces; modes that need tabs
+                                      ; (Makefile) set their own
+(column-number-mode 1)                ; Show column numbers in mode line
 (line-number-mode 1)
 (blink-cursor-mode 1)
 (show-paren-mode 1)
@@ -142,13 +144,6 @@
   (ffap-bindings)
   (setq ffap-url-fetcher #'browse-url-at-point))
 
-;; Dired navigation (C-x C-j to jump to current directory)
-(use-package dired-x
-  :ensure nil
-  :after dired
-  :demand t
-  :bind ("C-x C-j" . dired-jump))
-
 ;; Git interface & change navigation
 (use-package magit
   :bind (("C-x C-z" . magit-status)))
@@ -168,15 +163,8 @@
 (use-package eldoc  :ensure nil :diminish)  ; no idea who turns it on
 
 ;; ----------------------------------------------------------------------------
-;; Completion & Editing (Company + Ido)
+;; Completion & Editing
 ;; ----------------------------------------------------------------------------
-;; (use-package ido
-;;   :ensure nil
-;;   :config
-;;   (ido-mode 'buffers)
-;;   (setq ido-enable-flex-matching t
-;;         ido-default-file-method 'selected-window
-;;         ido-default-buffer-method 'selected-window))
 
 ;; Modern (as of 2026) set of packages to make completions look good. Vertico
 ;; controls how candidates are displayed and navigated. Orderless controls which
@@ -218,74 +206,23 @@
   :init
   (marginalia-mode))
 
-;; 4. Enhanced Search and Navigation Commands
-;; This provides the "Swiper-like" experience for Vertico
-;; Claude version
-;; (use-package consult
-;;   :bind (("C-x b" . consult-buffer)       ; replaces switch-to-buffer
-;;          ("M-s l" . consult-line)
-;;          ("M-s r" . consult-ripgrep)
-;;          ("M-g g" . consult-goto-line)    ; works now that M-g is a prefix again
-;;          ("M-g i" . consult-imenu)
-;;          ("M-y"   . consult-yank-pop)))
-(use-package consult
-  :disabled
-  :bind (;; Replace standard buffer/file switching with rich preview versions
-         ("C-x b" . consult-buffer)                ; Enhanced buffer list
-         ("M-y" . consult-yank-pop)                ; Interactive kill-ring (paste history)
 
-         ;; Search tools (The Ivy/Swiper equivalents)
-         ("C-s" . consult-line)                    ; Interactive line search in current buffer
-         ("M-s r" . consult-ripgrep)               ; Search through project using ripgrep
-         ("M-g g" . consult-goto-line))            ; Go to line with live preview
-)
-
-; Delete dabbrev matches that are the same as capf.  We know capf matches
-; include arguments (e.g. "foo(var1)" for capf vs just "foo" for dabbrev);
-; we also know the lists are sorted. So eliminate elements that follow their
-; prefixes and that have '(' as the very next character after the prefix
-(defun ak-delete-dabbrev-dups (list)
-  (let ((tail list) last)
-    (while (cdr tail)
-      (let ((first (car tail)) (second (cadr tail)) changed)
-        (if (string-prefix-p first second)
-            (if (string= first second)
-                (let ((f (seq-filter
-                          (lambda (el)
-                            (not (eq 'company-dabbrev-code
-                                     (get-text-property 0 'company-backend el))))
-                          (list first second))))
-                  ; will need to adjust code below if this ever stops being true
-                  (cl-assert (equal 1 (length f)))
-                  (setcar tail (elt f 0))
-                  (setcdr tail (cddr tail))
-                  (setq changed t))
-              ; 40 is ?( but the literal paren confuses the editor
-              (if (eq 40 (elt second (length first)))
-                  (progn
-                    (setcar tail second)
-                    (setcdr tail (cddr tail))
-                    (setq changed t)))))
-        (if (not changed)
-            (setq last tail
-                  tail (cdr tail)))))
-    list))
-
-(use-package company
-  :diminish company-mode
-  :bind (:map company-active-map
-              ("<tab>" . company-complete-common-or-cycle)
-              ("TAB"   . company-complete-common-or-cycle))
+(use-package corfu
   :custom
-  (company-transformers '(ak-delete-dabbrev-dups company-sort-by-occurrence))
+  (corfu-auto nil)  ;; we will enable it for prog modes separately
+  (corfu-auto-delay 0.2)
+  (corfu-auto-prefix 2)
+  :init
+  (global-corfu-mode)
   :config
-  (setf (nth (cl-position 'company-capf company-backends) company-backends)
-        '(company-capf company-dabbrev-code)))
+  (require 'corfu-popupinfo)
+  (corfu-popupinfo-mode 1))
 
-(use-package company-quickhelp
-  :after company
-  :config
-  (company-quickhelp-mode 1))
+;; Fallback completion sources, used when the mode's own source finds nothing.
+(use-package cape
+  :init
+  (add-hook 'completion-at-point-functions #'cape-dabbrev)
+  (add-hook 'completion-at-point-functions #'cape-file))
 
 (use-package jinx
   :diminish
@@ -311,18 +248,17 @@
 
 (defun ak-prog-mode-setup ()
   "Per-buffer settings for programming modes."
-  (setq-local tab-width 2
-              indent-tabs-mode nil
-              fill-column 80)
+  (setq-local fill-column 80
+              tab-always-indent 'complete ; TAB completes once the line is
+                                          ; indented)
+              corfu-auto t)               ; automatic popups
   (turn-on-auto-fill)
   (diminish 'auto-fill-function)
   (subword-mode 1)
-  (diminish 'subword-mode)
-  (company-mode 1))
+  (diminish 'subword-mode))
 (add-hook 'prog-mode-hook #'ak-prog-mode-setup)
 
 ;; Bound once in the shared map. A mode's own map overrides prog-mode-map.
-(keymap-set prog-mode-map "<tab>"   #'company-indent-or-complete-common) ; temporary, until migrate away from company
 (keymap-set prog-mode-map "C-<f10>" #'compile)
 
 (defun ak-c-indent-after-paste (&rest _)
@@ -360,14 +296,81 @@
 ;; ----------------------------------------------------------------------------
 ;; Languages & Formats (Markdown, Dot, Org)
 ;; ----------------------------------------------------------------------------
+
+;; Indentation width is a per-mode setting; there is no global one.
+;; (tab-width and indent-tabs-mode only govern tab characters.)
+(use-package emacs
+  :ensure nil
+  :custom
+  (python-indent-offset 2)   ; Python (python-mode and python-ts-mode)
+  (js-indent-level 2)        ; JavaScript, and JSON in js-mode
+  (css-indent-offset 2)      ; CSS (you already have this one in a css-mode stanza)
+  (sh-basic-offset 2)        ; shell scripts
+  (sgml-basic-offset 2))     ; HTML and XML
+
 (use-package markdown-mode
   :mode ("\\.md\\'" . markdown-mode)
   :custom
   (markdown-command "pandoc"))
 
-(use-package flycheck
+;; Flymake: the built-in diagnostics framework (underlines and mode-line counters).
+;; Eglot turns it on by itself in buffers it manages (C, C++, Python), so this
+;; stanza only matters for Emacs Lisp. There is no language server for Elisp, and
+;; Emacs is the best tool for it anyway.
+;; (use-package flymake
+
+;;   :ensure nil                          ; built in
+;;   :preface
+;;   (defun ak-elisp-flymake ()
+;;     "Enable Flymake in Emacs Lisp buffers, keeping only the byte-compiler backend.
+;; Checkdoc's docstring-style complaints are dropped."
+;;     (remove-hook 'flymake-diagnostic-functions #'elisp-flymake-checkdoc t)
+;;     (flymake-mode 1))
+;;   :custom
+;;   ;; Flymake's Elisp checker runs a separate `emacs -Q --batch' process that
+;;   ;; knows nothing about package.el or early-init.el. Hand it our load-path so
+;;   ;; it can find installed packages, which silences most "unknown function"
+;;   ;; warnings in init.el.
+;;   (elisp-flymake-byte-compile-load-path load-path)
+;;   :hook (emacs-lisp-mode . ak-elisp-flymake))
+
+
+(use-package flymake
+  :ensure nil
+  :preface
+  (defun ak-elisp-flymake ()
+    "Enable Flymake in Emacs Lisp buffers, but drop complaints about docstrings."
+    (remove-hook 'flymake-diagnostic-functions #'elisp-flymake-checkdoc t)
+    (flymake-mode 1))
+  (defun ak-flymake-child-env (orig-fn &rest args)
+    "Run Flymake's `emacs -Q --batch' checker with our state dir as its home.
+The child derives its eln-cache and elpa from $XDG_CONFIG_HOME/emacs, so point
+that at the parent of `ak-state-dir'. Otherwise trampoline files keep appearing
+in the directory that has init.el"
+    (let ((process-environment
+           (cons (concat "XDG_CONFIG_HOME="
+                         (directory-file-name
+                          (file-name-directory (directory-file-name ak-state-dir))))
+                 process-environment)))
+      (apply orig-fn args)))
+  :custom
+  ;; Flymake's Elisp checker runs a separate `emacs -Q --batch' process that
+  ;; knows nothing about package.el or early-init.el. Hand it our load-path so
+  ;; it can find installed packages, which silences most "unknown function"
+  ;; warnings in init.el.
+  (elisp-flymake-byte-compile-load-path load-path)
   :init
-  (global-flycheck-mode 1))
+  (advice-add 'elisp-flymake-byte-compile :around #'ak-flymake-child-env)
+  :hook (emacs-lisp-mode . ak-elisp-flymake))
+
+(use-package eglot
+  :ensure nil
+  :hook (((c-mode c++-mode python-mode) . eglot-ensure))
+  :custom
+  (eglot-autoshutdown t)
+  :config
+  (add-to-list 'eglot-server-programs
+               '((python-ts-mode python-mode) . ("pyrefly" "lsp"))))
 
 (use-package graphviz-dot-mode
   :mode "\\.dot\\'")
@@ -408,8 +411,15 @@
                            ("b"  . "http://b/%s")
                            ("go" . "http://go/%s"))))
 
+(use-package python
+  :ensure nil
+  :custom
+  (python-indent-offset 2))
+
+(use-package auctex :defer t)
+
 (use-package tex
-  :ensure auctex                       ; the package is auctex, the feature is tex
+  :ensure nil
   :defer t
   :hook ((LaTeX-mode . visual-line-mode)   ; wrap long paragraphs
          (LaTeX-mode . LaTeX-math-mode)    ; ` prefix inserts math symbols
