@@ -250,7 +250,7 @@
   "Per-buffer settings for programming modes."
   (setq-local fill-column 80
               tab-always-indent 'complete ; TAB completes once the line is
-                                          ; indented)
+                                          ; indented
               corfu-auto t)               ; automatic popups
   (turn-on-auto-fill)
   (diminish 'auto-fill-function)
@@ -270,10 +270,6 @@
 
 (with-eval-after-load 'cc-mode
   (keymap-set c-mode-base-map "RET" #'c-context-line-break))
-
-(use-package css-mode
-  :ensure nil
-  :custom (css-indent-offset 2))
 
 ;; Trim trailing whitespace only on lines I edited, everywhere except
 ;; for Markdown, because in Markdown adding two or more spaces means <br>
@@ -317,8 +313,12 @@
 ;; Eglot turns it on by itself in buffers it manages (C, C++, Python), so this
 ;; stanza only matters for Emacs Lisp. There is no language server for Elisp, and
 ;; Emacs is the best tool for it anyway.
-;; (use-package flymake
 
+
+;;; -----> trying to debug why stray files appear next to init.el. If nothing is
+;; happening for a while, uncomment the below and kill the one that follows.
+
+;; (use-package flymake
 ;;   :ensure nil                          ; built in
 ;;   :preface
 ;;   (defun ak-elisp-flymake ()
@@ -410,11 +410,6 @@ in the directory that has init.el"
   (org-link-abbrev-alist '(("cl" . "http://cl/%s")
                            ("b"  . "http://b/%s")
                            ("go" . "http://go/%s"))))
-
-(use-package python
-  :ensure nil
-  :custom
-  (python-indent-offset 2))
 
 (use-package auctex :defer t)
 

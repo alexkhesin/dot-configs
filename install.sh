@@ -58,7 +58,7 @@ fi
 if ! command -v clangd >/dev/null; then
   case "$(uname -s)" in
     Darwin)
-      echo "clang should have been installed by xcode-select at the top of this script"
+      echo "ERROR: clangd not on PATH; check xcode-select or install llvm" >&2
       exit 1
       ## brew install llvm
       ## # Homebrew's llvm is keg-only (not linked into PATH). Link just clangd, so
