@@ -90,11 +90,42 @@
     (add-hook 'after-make-frame-functions #'ak-apply-frame-fonts)
   (ak-apply-frame-fonts))
 
+(use-package emacs
+  :ensure nil
+  :preface
+  (defvar ak-minor-modes-always-shown '(flymake-mode)
+    "Minor modes whose mode-line lighter stays visible")
+
+  (defun ak-minor-mode-has-menu-p (mode)
+    "Non-nil if minor MODE has a menu-bar menu of its own.
+This is the lookup Emacs uses to build the collapsed-modes menu; modes without
+one only offer \"Help\" and \"Turn off\"."
+    (let ((map (cdr-safe (assq mode minor-mode-map-alist))))
+      (and (keymapp map) (keymap-lookup map "<menu-bar>") t)))
+
+  (defun ak-minor-modes-with-menus-only (orig-fn &rest args)
+    "Call ORIG-FN with `minor-mode-alist' to enable modes worth showing."
+    (let ((minor-mode-alist
+           (seq-filter (lambda (item)
+                         (let ((mode (car item)))
+                           (and (boundp mode) (symbol-value mode)
+                                (or (memq mode ak-minor-modes-always-shown)
+                                    (ak-minor-mode-has-menu-p mode)))))
+                       minor-mode-alist)))
+      (apply orig-fn args)))
+  :config
+  ;; Drop minor modes that only offer "Help" and "Turn off".
+  (advice-add 'mode-line--minor-modes :around #'ak-minor-modes-with-menus-only)
+  ;; Hide the version-control indicator ("Git-main").
+  (setq-default mode-line-format (remove '(vc-mode vc-mode) mode-line-format))
+
+  ;; Collapse the remaining lighters into one "..." button, except
+  ;; the always-shown ones.
+  (setopt mode-line-collapse-minor-modes (cons 'not ak-minor-modes-always-shown)))
+
 ;; ----------------------------------------------------------------------------
 ;; UI & Utilities
 ;; ----------------------------------------------------------------------------
-(use-package diminish)
-
 (use-package savehist
   :ensure nil
   :init
@@ -159,9 +190,6 @@
 (use-package goto-chg
   :bind (("C-x C-/" . goto-last-change)))
 
-(use-package abbrev :ensure nil :diminish)  ; no idea who turns it on
-(use-package eldoc  :ensure nil :diminish)  ; no idea who turns it on
-
 ;; ----------------------------------------------------------------------------
 ;; Completion & Editing
 ;; ----------------------------------------------------------------------------
@@ -225,7 +253,6 @@
   (add-hook 'completion-at-point-functions #'cape-file))
 
 (use-package jinx
-  :diminish
   :hook ((text-mode prog-mode) . ak-enable-jinx)
   :bind (("M-$"   . jinx-correct)
          ("C-M-$" . jinx-languages)
@@ -253,9 +280,7 @@
                                           ; indented
               corfu-auto t)               ; automatic popups
   (turn-on-auto-fill)
-  (diminish 'auto-fill-function)
-  (subword-mode 1)
-  (diminish 'subword-mode))
+  (subword-mode 1))
 (add-hook 'prog-mode-hook #'ak-prog-mode-setup)
 
 ;; Bound once in the shared map. A mode's own map overrides prog-mode-map.
@@ -274,7 +299,6 @@
 ;; Trim trailing whitespace only on lines I edited, everywhere except
 ;; for Markdown, because in Markdown adding two or more spaces means <br>
 (use-package ws-butler
-  :diminish
   :config
   (dolist (mode '(markdown-mode gfm-mode))
     (add-to-list 'ws-butler-global-exempt-modes mode))
@@ -302,7 +326,8 @@
   (js-indent-level 2)        ; JavaScript, and JSON in js-mode
   (css-indent-offset 2)      ; CSS (you already have this one in a css-mode stanza)
   (sh-basic-offset 2)        ; shell scripts
-  (sgml-basic-offset 2))     ; HTML and XML
+  (sgml-basic-offset 2)      ; HTML and XML
+  )
 
 (use-package markdown-mode
   :mode ("\\.md\\'" . markdown-mode)
@@ -378,9 +403,7 @@ in the directory that has init.el"
 (defun ak-org-setup ()
   "Prose-friendly display for Org buffers."
   (variable-pitch-mode 1)
-  (visual-line-mode 1)
-  (diminish 'visual-line-mode)
-  (diminish 'buffer-face-mode))        ; the minor mode variable-pitch-mode enables
+  (visual-line-mode 1))
 
 (use-package org
   :ensure nil
