@@ -32,23 +32,6 @@
 (setq package-user-dir (expand-file-name "elpa/" ak-state-dir)
       package-gnupg-dir (expand-file-name "gnupg/" ak-state-dir))
 
-;; MacOS Modifiers
-(when (eq system-type 'darwin)
-  ; If you want a mac-native behavior (Command-c/v/x for copy-paste, uncomment
-  ; (cua-selection-mode t) below, and kill the progn that follows.  Emacs 24
-  ; already defaults to M-c/v for copy/paste on a Mac, and cua-selection-mode
-  ; is only needed for rectangle support (and delete-selection-mode, but that
-  ; can be turned on separately with (delete-selection-mode 1).
-
-  ;; !!! do not try it because ssh-from-work-via-X11 emacs will still use X11,
-  ; i.e. not mac-native interpretations of Option and Command keys. Unless can
-  ; change that too.
-  ; (cua-selection-mode t)
-  ;
-  ; This gives more familiar bindings to those who cannot get Linux bindings
-  (setq mac-command-modifier 'meta
-        mac-option-modifier nil))
-
 ;; Suppress UI chrome before frame creation
 (unless (eq system-type 'darwin)
   (push '(menu-bar-lines . 0) default-frame-alist))

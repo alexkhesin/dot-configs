@@ -1,4 +1,11 @@
-;; -*- lexical-binding: t; -*-
+;; -*- lexical-binding: t; byte-compile-warnings: (not noruntime);-*-
+
+;; (not noruntime) above disables "function might not be defined at runtime"
+;; warnings from flymake.
+
+;; To silence flymake warnings about unknown variables and functions
+(defvar ak-state-dir)
+(defvar ak-frame-width)
 
 ;; Platfrom detection
 (defconst ak-mac-p (eq system-type 'darwin))
@@ -8,7 +15,7 @@
 (require 'package)
 (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
 ;; Prefer official curated releases over rolling Git snapshots
-(setq package-archive-priorities
+(setopt package-archive-priorities
       '(("gnu"    . 30)
         ("nongnu" . 20)
         ("melpa"  . 10)))
@@ -17,8 +24,8 @@
 ;; Built-in use-package settings
 (require 'use-package)
 (require 'cl-lib)  ;; Common List utilities needed for other cl-*` functions
-(setq use-package-always-ensure t
-      use-package-expand-minimally t)
+(setopt use-package-always-ensure t
+        use-package-expand-minimally t)
 
 ;; Some packages store files next to init.el. Make it stop.
 (use-package no-littering
@@ -48,10 +55,12 @@
 ;; ----------------------------------------------------------------------------
 ;; Core Sensible Defaults
 ;; ----------------------------------------------------------------------------
-(setq use-short-answers t)                      ; Modern (fset 'yes-or-no-p 'y-or-n-p)
-(setq compilation-ask-about-save nil)           ; Save buffers without prompting
-(setq truncate-partial-width-windows nil)       ; Wrap horizontally-split
-(setq enable-recursive-minibuffers t)
+(setopt use-short-answers t                  ; Modern (fset 'yes-or-no-p 'y-or-n-p)
+        compilation-ask-about-save nil       ; Save buffers without prompting
+        truncate-partial-width-windows nil   ; Wrap horizontally-split
+        enable-recursive-minibuffers t
+        split-height-threshold nil)
+
 ;; Given enable-recursive-minibuffers, a new minibuffer command can be started
 ;; while another one is still waiting for input (e.g. find-file). The nested
 ;; prompt looks identical to the outer one, so it's easy to lose track of how
@@ -59,7 +68,6 @@
 ;; (something like "[2]"), to indicate there's an unfinished prompt underneath.
 (minibuffer-depth-indicate-mode 1)
 
-(setq split-height-threshold nil)
 (setq-default indent-tabs-mode nil)   ; indent with spaces; modes that need tabs
                                       ; (Makefile) set their own
 (column-number-mode 1)                ; Show column numbers in mode line
@@ -72,12 +80,12 @@
 (cua-mode 1)
 
 ;; Keep Customize out of init.el
-(setq custom-file (expand-file-name "custom.el" ak-state-dir))
+(setopt custom-file (expand-file-name "custom.el" ak-state-dir))
 (load custom-file 'noerror 'nomessage)
 
 ;; Window navigation
 (windmove-default-keybindings 'meta)  ; navigate windows with M-<arrows>
-(setq windmove-wrap-around t)
+(setopt windmove-wrap-around t)
 
 ;; Font configuration (handles standalone GUI and emacsclient daemon frames)
 (defun ak-apply-frame-fonts (&optional frame)
@@ -126,6 +134,14 @@ one only offer \"Help\" and \"Turn off\"."
 ;; ----------------------------------------------------------------------------
 ;; UI & Utilities
 ;; ----------------------------------------------------------------------------
+
+;; macOS: Command acts as Meta and Option stays native (for typing special
+;; characters), to make it work the same whether it is locally launched emacs or
+;; ssh-from-work-via-X11 emacs running on Linux but displaying on Mac.
+(when ak-mac-p
+  (setq mac-command-modifier 'meta
+        mac-option-modifier nil))
+
 (use-package savehist
   :ensure nil
   :init
@@ -148,7 +164,7 @@ one only offer \"Help\" and \"Turn off\"."
   :bind ("C-x u" . vundo)
   :config
   ;; Optional: Use prettier unicode characters to draw the tree lines
-  (setq vundo-glyph-alist vundo-unicode-symbols))
+  (setopt vundo-glyph-alist vundo-unicode-symbols))
 
 (use-package recentf
   :ensure nil
@@ -156,13 +172,13 @@ one only offer \"Help\" and \"Turn off\"."
   :custom
   (recentf-max-saved-items 500)
   (recentf-max-menu-items 60)
-  :bind (([(meta f12)] . recentf-open-files)))
+  :bind ("M-<f12>" . recentf-open-files))
 
 (use-package ibuffer
   :ensure nil
-  :bind (("C-x C-b" . ibuffer))
+  :bind ("C-x C-b" . ibuffer)
   :config
-  (setq ibuffer-default-sorting-mode 'filename/process))
+  (setopt ibuffer-default-sorting-mode 'filename/process))
 
 (use-package uniquify
   :ensure nil
@@ -173,15 +189,14 @@ one only offer \"Help\" and \"Turn off\"."
   :ensure nil
   :config
   (ffap-bindings)
-  (setq ffap-url-fetcher #'browse-url-at-point))
+  (setopt ffap-url-fetcher #'browse-url-at-point))
 
 ;; Git interface & change navigation
 (use-package magit
   :bind (("C-x C-z" . magit-status)))
 
 (use-package diff-hl
-  :hook ((magit-pre-refresh  . diff-hl-magit-pre-refresh)
-         (magit-post-refresh . diff-hl-magit-post-refresh)
+  :hook ((magit-post-refresh . diff-hl-magit-post-refresh)
          (dired-mode         . diff-hl-dired-mode))   ; optional: markers in Dired too
   :init
   (global-diff-hl-mode 1)
@@ -208,15 +223,13 @@ one only offer \"Help\" and \"Turn off\"."
   (vertico-mode 1)
   :config
   ;; Optional: Tweak minibuffer behavior
-  (setq vertico-resize t          ; Grow and shrink minibuffer dynamically
-        vertico-cycle t))         ; Go back to top when hitting the bottom
-
-; get Jinx completions into Vertico
-(with-eval-after-load 'vertico
+  (setopt vertico-resize t          ; Grow and shrink minibuffer dynamically
+          vertico-cycle t)          ; Go back to top when hitting the bottom
+  ; get Jinx completions into Vertico
   (require 'vertico-multiform)
-  (add-to-list 'vertico-multiform-categories
-               '(jinx grid (vertico-grid-annotate . 20) (vertico-count . 4)))
-  (vertico-multiform-mode))
+  (setopt vertico-multiform-categories
+          '((jinx grid (vertico-grid-annotate . 20) (vertico-count . 4))))
+  (vertico-multiform-mode 1))
 
 ;; 2. Fuzzy/Component Matcher.
 ;; Allows typing terms in any order, separated by spaces (e.g., "init el"
@@ -252,6 +265,11 @@ one only offer \"Help\" and \"Turn off\"."
   (add-hook 'completion-at-point-functions #'cape-dabbrev)
   (add-hook 'completion-at-point-functions #'cape-file))
 
+;; Spelling
+;; Get a message instead of an error if jinx is unavaialble
+(defun ak-enable-jinx ()
+  (with-demoted-errors "jinx: %S" (jinx-mode 1)))
+
 (use-package jinx
   :hook ((text-mode prog-mode) . ak-enable-jinx)
   :bind (("M-$"   . jinx-correct)
@@ -265,10 +283,6 @@ one only offer \"Help\" and \"Turn off\"."
          ("C-'" . jinx-correct))
   :custom
   (jinx-languages "en_US"))
-
-;; Get a message instead of an error if jinx is unavaialble
-(defun ak-enable-jinx ()
-  (with-demoted-errors "jinx: %S" (jinx-mode 1)))
 
 ;; Programming mode tweaks
 (setopt compilation-scroll-output t)
@@ -286,14 +300,19 @@ one only offer \"Help\" and \"Turn off\"."
 ;; Bound once in the shared map. A mode's own map overrides prog-mode-map.
 (keymap-set prog-mode-map "C-<f10>" #'compile)
 
+;; To silence flymake warnings about unknown variables and functions
+(declare-function c-indent-defun "cc-cmds")
+(declare-function c-context-line-break "cc-cmds")
+(defvar c-mode-base-map)
+
 (defun ak-c-indent-after-paste (&rest _)
   "Re-indent the surrounding defun after pasting in a CC Mode buffer."
   (when (derived-mode-p 'c-mode 'c++-mode 'objc-mode 'java-mode)
     (with-demoted-errors "c-indent-defun: %S"
       (c-indent-defun))))
-(advice-add 'cua-paste :after #'ak-c-indent-after-paste)
 
 (with-eval-after-load 'cc-mode
+  (advice-add 'cua-paste :after #'ak-c-indent-after-paste)
   (keymap-set c-mode-base-map "RET" #'c-context-line-break))
 
 ;; Trim trailing whitespace only on lines I edited, everywhere except
@@ -322,12 +341,11 @@ one only offer \"Help\" and \"Turn off\"."
 (use-package emacs
   :ensure nil
   :custom
-  (python-indent-offset 2)   ; Python (python-mode and python-ts-mode)
-  (js-indent-level 2)        ; JavaScript, and JSON in js-mode
-  (css-indent-offset 2)      ; CSS (you already have this one in a css-mode stanza)
-  (sh-basic-offset 2)        ; shell scripts
-  (sgml-basic-offset 2)      ; HTML and XML
-  )
+  (python-indent-offset 2)
+  (js-indent-level 2)
+  (css-indent-offset 2)
+  (sh-basic-offset 2)
+  (sgml-basic-offset 2))
 
 (use-package markdown-mode
   :mode ("\\.md\\'" . markdown-mode)
@@ -335,31 +353,8 @@ one only offer \"Help\" and \"Turn off\"."
   (markdown-command "pandoc"))
 
 ;; Flymake: the built-in diagnostics framework (underlines and mode-line counters).
-;; Eglot turns it on by itself in buffers it manages (C, C++, Python), so this
-;; stanza only matters for Emacs Lisp. There is no language server for Elisp, and
-;; Emacs is the best tool for it anyway.
-
-
-;;; -----> trying to debug why stray files appear next to init.el. If nothing is
-;; happening for a while, uncomment the below and kill the one that follows.
-
-;; (use-package flymake
-;;   :ensure nil                          ; built in
-;;   :preface
-;;   (defun ak-elisp-flymake ()
-;;     "Enable Flymake in Emacs Lisp buffers, keeping only the byte-compiler backend.
-;; Checkdoc's docstring-style complaints are dropped."
-;;     (remove-hook 'flymake-diagnostic-functions #'elisp-flymake-checkdoc t)
-;;     (flymake-mode 1))
-;;   :custom
-;;   ;; Flymake's Elisp checker runs a separate `emacs -Q --batch' process that
-;;   ;; knows nothing about package.el or early-init.el. Hand it our load-path so
-;;   ;; it can find installed packages, which silences most "unknown function"
-;;   ;; warnings in init.el.
-;;   (elisp-flymake-byte-compile-load-path load-path)
-;;   :hook (emacs-lisp-mode . ak-elisp-flymake))
-
-
+;; Eglot turns on flymake automatically for languages it manages, so this stanza
+;; only matters for the ones it does not - currently just Elisp.
 (use-package flymake
   :ensure nil
   :preface
@@ -380,9 +375,9 @@ in the directory that has init.el"
       (apply orig-fn args)))
   :custom
   ;; Flymake's Elisp checker runs a separate `emacs -Q --batch' process that
-  ;; knows nothing about package.el or early-init.el. Hand it our load-path so
-  ;; it can find installed packages, which silences most "unknown function"
-  ;; warnings in init.el.
+  ;; does not know about installed package or early-init.el. Give it our
+  ;; load-path so it can find installed packages, which silences most "unknown
+  ;; function" and "unknown variable" warnings in init.el.
   (elisp-flymake-byte-compile-load-path load-path)
   :init
   (advice-add 'elisp-flymake-byte-compile :around #'ak-flymake-child-env)
