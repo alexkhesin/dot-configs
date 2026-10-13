@@ -1,0 +1,6 @@
+Host *.corp.google.com *.c.googlers.com
+    ForwardAgent yes
+    IdentityAgent ${SSH_AUTH_SOCK}
+
+Host !*.corp.google.com !*.c.googlers.com *
+    IdentityAgent "~/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"
