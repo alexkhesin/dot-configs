@@ -3,27 +3,28 @@ font-family = "JetBrains Mono"
 
 # --- Appearance & Window ---
 theme = "Gruvbox Dark"
-
 window-padding-x = 6
 window-padding-y = 6
+scrollbar = never
+
+# macOS clean titlebar (uncomment on macOS if desired)
+# macos-titlebar-style = hidden
+
+# --- Cursor & Mouse ---
 cursor-style = block
 cursor-style-blink = false
 mouse-hide-while-typing = true
-unfocused-split-opacity = 0.70
-
-# macOS clean titlebar (ignored on Linux)
-## macos-titlebar-style = hidden
-
-# System clipboard pass-through (OSC 52) - needed for tmx??
-# clipboard-read = allow
-# clipboard-write = allow
-
-# Seamless scrolling delegation to tmux mouse mode
 mouse-scroll-multiplier = 1
+copy-on-select = false
 
-scrollback-limit = 100_000_000
-# Remove GTK scrollbar
-scrollbar = never
-
-# Dims inactive terminal splits to guide focal attention to the active buffer
+# --- Splits ---
+# Dims inactive terminal splits (native Ghostty splits)
 unfocused-split-opacity = 0.70
+
+# --- Buffer & Clipboard ---
+scrollback-limit = 100_000
+
+# Deny unprompted clipboard reads (prevents silent exfiltration of secrets/passwords)
+clipboard-read = deny
+# But writing is always useful
+clipboard-write = allow
