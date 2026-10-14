@@ -14,11 +14,13 @@
 ;; Package Archives & Bootstrapping
 (require 'package)
 (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
+(add-to-list 'package-archives '("gnu-devel" . "https://elpa.gnu.org/devel/") t)
 ;; Prefer official curated releases over rolling Git snapshots
 (setopt package-archive-priorities
       '(("gnu"    . 30)
         ("nongnu" . 20)
-        ("melpa"  . 10)))
+        ("melpa"  . 10)
+        ("gnu-devel" . 0)))
 
 (package-initialize)
 ;; Built-in use-package settings
@@ -139,6 +141,8 @@ one only offer \"Help\" and \"Turn off\"."
 ;; characters), to make it work the same whether it is locally launched emacs or
 ;; ssh-from-work-via-X11 emacs running on Linux but displaying on Mac.
 (when ak-mac-p
+  (defvar mac-command-modifier)
+  (defvar mac-option-modifier)
   (setq mac-command-modifier 'meta
         mac-option-modifier nil))
 
@@ -191,13 +195,15 @@ one only offer \"Help\" and \"Turn off\"."
   (ffap-bindings)
   (setopt ffap-url-fetcher #'browse-url-at-point))
 
-;; Git interface & change navigation
-(use-package magit
-  :bind (("C-x C-z" . magit-status)))
+(use-package vc-jj
+  ; TODO: remove after 0.6+ reaches ELPA. 0.5 has a bug
+  :pin gnu-devel
+  :config
+  ;; In colocated repos (.jj + .git), make VC pick jj over Git
+  (setq vc-handled-backends (cons 'JJ (delq 'JJ vc-handled-backends))))
 
 (use-package diff-hl
-  :hook ((magit-post-refresh . diff-hl-magit-post-refresh)
-         (dired-mode         . diff-hl-dired-mode))   ; optional: markers in Dired too
+  :hook (dired-mode . diff-hl-dired-mode)   ; optional: markers in Dired too
   :init
   (global-diff-hl-mode 1)
   (diff-hl-flydiff-mode 1))
@@ -374,6 +380,9 @@ in the directory that has init.el"
                  process-environment)))
       (apply orig-fn args)))
   :custom
+  ;; Flymake's Elisp byte-compile backend refuses to check files Emacs does not
+  ;; trust (init.el is trusted automatically; local.el is not).
+  (trusted-content '("~/dot-configs/emacs.d/local.el"))
   (flymake-mode-line-lighter "FM")   ; or "" to show only the error counters
   ;; Flymake's Elisp checker runs a separate `emacs -Q --batch' process that
   ;; does not know about installed package or early-init.el. Give it our
@@ -389,6 +398,9 @@ in the directory that has init.el"
   :hook ((c-mode c++-mode python-mode) . eglot-ensure)
   :custom
   (eglot-autoshutdown t)
+  ;; 'inlay hints' are parameter names and inferred types drawn inline. This
+  ;; adds annoying noise, disable it.
+  (eglot-ignored-server-capabilities '(:inlayHintProvider))
   :config
   (add-to-list 'eglot-server-programs
                '((python-ts-mode python-mode) . ("pyrefly" "lsp"))))
@@ -455,15 +467,22 @@ in the directory that has init.el"
   :hook ((org-mode . org-modern-mode)
          (org-agenda-finalize . org-modern-agenda)))
 
+(defvar ak-frame-title-prefix nil
+  "Mode-line construct shown first in the frame title, to allow custom prefix")
+;; Mode-line processing ignores :eval inside a variable's value unless the
+;; variable is marked risky (and local.el override does use this form).
+(put 'ak-frame-title-prefix 'risky-local-variable t)
+
 (use-package which-func
   :ensure nil
   :custom
   ;; Frame title: "buffer-name [current-function]". The bracketed part is
   ;; dropped when point is not inside a function.
   (frame-title-format
-   '("%b" (:eval (let ((fn (format-mode-line 'which-func-current)))
-                   (unless (or (string-empty-p fn) (string= fn which-func-unknown))
-                     '(" [" which-func-current "]"))))))
+   '("" ak-frame-title-prefix "%b"
+     (:eval (let ((fn (format-mode-line 'which-func-current)))
+              (unless (or (string-empty-p fn) (string= fn which-func-unknown))
+                '(" [" which-func-current "]"))))))
   :config
   (which-function-mode 1)
   ;; Keep the function name out of the mode line (it is in the title instead).
@@ -524,4 +543,9 @@ in the directory that has init.el"
 (keymap-global-set "C-S-<tab>"         #'ak-other-window-backward) ; macOS and others
 
 ;; Local additions
-(load (expand-file-name "local" "~/dot-configs/emacs.d") 'noerror 'nomessage)
+;; Local additions (work-specific settings, loaded last so they win).
+;; Only the Linux machines have this file; there, a missing file is an error.
+(let ((local (expand-file-name "local" "~/dot-configs/emacs")))
+  (if ak-linux-p
+      (load local nil 'nomessage)     ; no 'noerror: signals file-missing
+    (load local 'noerror 'nomessage)))
