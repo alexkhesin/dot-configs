@@ -16,6 +16,9 @@ fi
 if [ "$(uname -s)" = "Darwin" ]; then
   emacs=/Applications/Emacs.app/Contents/MacOS/Emacs
   emacsclient=/Applications/Emacs.app/Contents/MacOS/bin/emacsclient
+elif [ -e ~/.local/bin/emacs ]; then
+  emacs=~/.local/bin/emacs
+  emacsclient=~/.local/bin/emacsclient
 else
   emacs=/usr/bin/emacs
   emacsclient=/usr/bin/emacsclient
@@ -35,8 +38,9 @@ if [ "$(uname -s)" = "Linux" ]; then
   # Workaround from
   # <http://calypso.tux.org/pipermail/xemacs-beta/2009-May/016494.html>
   # is adapted here for my setup.
-  xauth list | while read dpy; do
-    $emacsclient -s "$name" -e "(shell-command \"xauth add $dpy\")" >/dev/null &
+  xauth list | while read -r dpy proto key; do
+    case "$dpy" in *:) continue ;; esac
+    $emacsclient -s "$name" -e "(shell-command \"xauth add $dpy $proto $key\")" >/dev/null &
   done
   wait
 fi
