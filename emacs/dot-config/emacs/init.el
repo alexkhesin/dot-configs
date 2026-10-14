@@ -1,4 +1,4 @@
-;; -*- lexical-binding: t; byte-compile-warnings: (not noruntime);-*-
+;; -*- lexical-binding: t; byte-compile-warnings: (not noruntime); -*-
 
 ;; (not noruntime) above disables "function might not be defined at runtime"
 ;; warnings from flymake.
@@ -374,6 +374,7 @@ in the directory that has init.el"
                  process-environment)))
       (apply orig-fn args)))
   :custom
+  (flymake-mode-line-lighter "FM")   ; or "" to show only the error counters
   ;; Flymake's Elisp checker runs a separate `emacs -Q --batch' process that
   ;; does not know about installed package or early-init.el. Give it our
   ;; load-path so it can find installed packages, which silences most "unknown
@@ -385,7 +386,7 @@ in the directory that has init.el"
 
 (use-package eglot
   :ensure nil
-  :hook (((c-mode c++-mode python-mode) . eglot-ensure))
+  :hook ((c-mode c++-mode python-mode) . eglot-ensure)
   :custom
   (eglot-autoshutdown t)
   :config
@@ -457,16 +458,17 @@ in the directory that has init.el"
 (use-package which-func
   :ensure nil
   :custom
-  (which-func-unknown "")
+  ;; Frame title: "buffer-name [current-function]". The bracketed part is
+  ;; dropped when point is not inside a function.
   (frame-title-format
-   '("%b" (:eval (let ((fn (and (boundp 'which-func-table)
-                                (hash-table-p which-func-table)
-                                (gethash (selected-window) which-func-table))))
-                   (if (and (stringp fn) (not (string-empty-p fn)))
-                       (concat " [" fn "]")
-                     "")))))
+   '("%b" (:eval (let ((fn (format-mode-line 'which-func-current)))
+                   (unless (or (string-empty-p fn) (string= fn which-func-unknown))
+                     '(" [" which-func-current "]"))))))
   :config
   (which-function-mode 1)
+  ;; Keep the function name out of the mode line (it is in the title instead).
+  ;; This relies on how which-func registers itself in `mode-line-misc-info';
+  ;; if that changes, the name just reappears in the mode line.
   (setq mode-line-misc-info
         (assq-delete-all 'which-function-mode mode-line-misc-info)))
 
