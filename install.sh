@@ -2,36 +2,16 @@
 
 set -euo pipefail
 
-# Install packages for emacs spell-checker, jinx
+# In case we just installed homebrew on a new laptop, and zshrc does
+# not have its path yet
+PATH="$PATH:/opt/homebrew/bin/"
+
+# Install packages for various packages
 
 case "$(uname -s)" in
   Darwin)
     xcode-select -p >/dev/null 2>&1 || xcode-select --install # C compiler
-    brew install enchant pkgconf
-    ;;
-  Linux)
-    if command -v apt-get >/dev/null; then
-      sudo apt-get install -y build-essential libenchant-2-dev pkgconf hunspell-en-us
-    elif command -v dnf >/dev/null; then
-      sudo dnf install -y gcc enchant2-devel pkgconf-pkg-config hunspell-en-US
-    elif command -v pacman >/dev/null; then
-      sudo pacman -S --needed --noconfirm base-devel enchant pkgconf hunspell-en_us
-    else
-      echo "Install: enchant (+dev files), pkgconf, a C compiler, a hunspell English dictionary" >&2
-      exit 1
-    fi
-    ;;
-esac
-
-# Install `uv` for managing python tools (pyrefly)
-case ":$PATH:" in
-  *":$HOME/.local/bin:"*) local_bin_on_path=1 ;;
-  *) local_bin_on_path= ;;
-esac
-
-case "$(uname -s)" in
-  Darwin)
-    brew install uv
+    brew install enchant pkgconf stow fzf uv
     ;;
   Linux)
     if ! command -v uv >/dev/null; then
@@ -41,6 +21,17 @@ case "$(uname -s)" in
       curl -LsSf https://astral.sh/uv/install.sh | UV_NO_MODIFY_PATH=1 sh
       PATH="$HOME/.local/bin:$PATH"
     fi
+
+    if command -v apt-get >/dev/null; then
+      sudo apt-get install -y build-essential libenchant-2-dev pkgconf hunspell-en-us stow fzf
+    elif command -v dnf >/dev/null; then
+      sudo dnf install -y gcc enchant2-devel pkgconf-pkg-config hunspell-en-US stow fzf
+    elif command -v pacman >/dev/null; then
+      sudo pacman -S --needed --noconfirm base-devel enchant pkgconf hunspell-en_us stow fzf
+    else
+      echo "Install: stow, enchant (+dev files), pkgconf, a C compiler, a hunspell English dictionary" >&2
+      exit 1
+    fi
     ;;
 esac
 
@@ -49,6 +40,11 @@ command -v uv >/dev/null || { echo "uv not found on PATH after install" >&2; exi
 # Install only if missing. Upgrade on your own schedule: uv tool upgrade pyrefly
 tools=$(uv tool list 2>/dev/null || true)
 grep -q '^pyrefly ' <<<"$tools" || uv tool install pyrefly
+
+case ":$PATH:" in
+  *":$HOME/.local/bin:"*) local_bin_on_path=1 ;;
+  *) local_bin_on_path= ;;
+esac
 
 if [ -z "$local_bin_on_path" ]; then
   echo "NOTE: add ~/.local/bin to PATH in your shell config so Emacs can find pyrefly" >&2
