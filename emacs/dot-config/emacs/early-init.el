@@ -25,7 +25,7 @@
 (make-directory ak-state-dir t)
 
 ;; Redirect native-compilation cache (.eln files) to XDG directory
-(when (fboundp 'startup-redirect-eln-cache)
+(when (native-comp-available-p)
   (startup-redirect-eln-cache (expand-file-name "eln-cache/" ak-state-dir)))
 
 ;; Workaround for the GCC driver bundled in Emacs.app: it derives

@@ -25,7 +25,6 @@
 (package-initialize)
 ;; Built-in use-package settings
 (require 'use-package)
-(require 'cl-lib)  ;; Common List utilities needed for other cl-*` functions
 (setopt use-package-always-ensure t
         use-package-expand-minimally t)
 
@@ -72,10 +71,7 @@
 
 (setq-default indent-tabs-mode nil)   ; indent with spaces; modes that need tabs
                                       ; (Makefile) set their own
-(column-number-mode 1)                ; Show column numbers in mode line
-(line-number-mode 1)
-(blink-cursor-mode 1)
-(show-paren-mode 1)
+(column-number-mode 1)
 (global-auto-revert-mode 1)
 (winner-mode 1)  ; C-c + <left/right> to get back to previous window layout
 (repeat-mode 1)  ; M-g n, then n/p to repeat
