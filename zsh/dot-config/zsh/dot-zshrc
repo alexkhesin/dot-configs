@@ -72,8 +72,13 @@ bindkey '^[[B' down-line-or-beginning-search
 bindkey '^[OA' up-line-or-beginning-search
 bindkey '^[OB' down-line-or-beginning-search
 
-for custom_functions in ~/dot-configs/zsh/functions \
-                            "$ZDOTDIR/functions"; do
+# Ghostty installed from source on glinux puts _ghostty there. Perhaps will be
+# useful for other things.
+if [[ -d "$HOME/.local/share/zsh/site-functions" ]]; then
+  fpath=("$HOME/.local/share/zsh/site-functions" $fpath)
+fi
+
+for custom_functions in "$ZDOTDIR/functions"; do
   if [[ -d $custom_functions ]]; then
     fpath=($custom_functions $fpath)
     # compinit will load all the _ prefixed functions, because it assumes that
@@ -96,13 +101,13 @@ else
   compinit -C -d "$zcompdump"
 fi
 
+# importantly, on corp workstation, this overrides RPROMPT above
+local_additions="$ZDOTDIR/local.zsh"
+[[ -r $local_additions ]] && source $local_additions
+
 # bash completion adapter for completions below
 autoload -Uz bashcompinit
 bashcompinit
-
-# importantly, on corp workstation, this overrides RPROMPT above
-local_additions=~/dot-configs/zsh/local.zsh
-[[ -r $local_additions ]] && source $local_additions
 
 # Google tools; the (N) flag prevents errors if a file doesn't exist.
 for comp in /etc/bash_completion.d/(p4|g4d|hgd|jjd)(N); do
