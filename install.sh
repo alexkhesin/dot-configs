@@ -79,7 +79,9 @@ fi
 
 sys_stow() { stow --verbose=2 -t ~ --dotfiles "$@"; }
 
-sys_stow emacs tmux zsh
+sys_stow emacs tmux
+# zsh has dot-files inside of dot-directory
+sys_stow --no-folding zsh
 
 OS_SUFFIX=$(uname | tr '[:upper:]' '[:lower:]')
 

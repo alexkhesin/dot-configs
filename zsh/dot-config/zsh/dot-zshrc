@@ -19,7 +19,7 @@ if [[ -r "${XDG_CACHE_HOME}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
   source "${XDG_CACHE_HOME}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
 
-. ~/dot-configs/public/zsh/aliases
+. "$ZDOTDIR/aliases"
 
 set -o ignoreeof    # do not exit upon reading ^D
 
@@ -73,7 +73,7 @@ bindkey '^[OA' up-line-or-beginning-search
 bindkey '^[OB' down-line-or-beginning-search
 
 for custom_functions in ~/dot-configs/zsh/functions \
-                            ~/dot-configs/public/zsh/functions; do
+                            "$ZDOTDIR/functions"; do
   if [[ -d $custom_functions ]]; then
     fpath=($custom_functions $fpath)
     # compinit will load all the _ prefixed functions, because it assumes that
@@ -187,8 +187,8 @@ if [ -f $PLUGIN_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]; then
   source $PLUGIN_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 fi
 
-if [[ -f ~/dot-configs/public/zsh/p10k.zsh ]]; then
-  source ~/dot-configs/public/zsh/p10k.zsh
+if [[ -f "$ZDOTDIR/p10k.zsh" ]]; then
+  source "$ZDOTDIR/p10k.zsh"
 fi
 
 # Prevent duplicates in the path array, should be done after all PATH

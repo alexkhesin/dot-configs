@@ -3,3 +3,5 @@ ensure_dir() {
     [[ ! -d "$dir" ]] && mkdir -p "$dir"
   done
 }
+
+export ZDOTDIR="$HOME/.config/zsh"
