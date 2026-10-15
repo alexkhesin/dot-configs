@@ -1,3 +1,11 @@
 font-size = 13
 
+# Left Option acts as Meta/Alt (Emacs, shell M-b/M-f); right Option still
+# types special characters.
+# macos-option-as-alt = left
+
+# macOS clean titlebar (uncomment if desired)
+# macos-titlebar-style = hidden
+
+# Loaded after this file, so anything set there overrides the lines above.
 config-file = ~/dot-configs/public/ghostty/dot-config/ghostty/config.ghostty

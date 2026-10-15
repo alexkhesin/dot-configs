@@ -7,24 +7,19 @@ window-padding-x = 6
 window-padding-y = 6
 scrollbar = never
 
-# macOS clean titlebar (uncomment on macOS if desired)
-# macos-titlebar-style = hidden
-
 # --- Cursor & Mouse ---
 cursor-style = block
 cursor-style-blink = false
 mouse-hide-while-typing = true
 mouse-scroll-multiplier = 1
-copy-on-select = false
 
-# --- Splits ---
-# Dims inactive terminal splits (native Ghostty splits)
-unfocused-split-opacity = 0.70
+# copy-on-select is left at its default: on Linux, selections go to PRIMARY
+# (middle-click); on macOS, selecting copies nothing.
 
 # --- Buffer & Clipboard ---
-scrollback-limit = 100_000
+# Scrollback inside tmux belongs to tmux; Ghostty's own default (10 MB) covers
+# shells outside tmux. Note that scrollback-limit is in bytes, not lines.
 
-# Deny unprompted clipboard reads (prevents silent exfiltration of secrets/passwords)
+# Deny unprompted clipboard reads (prevents silent exfiltration of secrets/passwords).
+# Writes are allowed by default.
 clipboard-read = deny
-# But writing is always useful
-clipboard-write = allow

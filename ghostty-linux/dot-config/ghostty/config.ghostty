@@ -1,3 +1,4 @@
 font-size = 11
 
+# Loaded after this file, so anything set there overrides the lines above.
 config-file = ~/dot-configs/public/ghostty/dot-config/ghostty/config.ghostty
