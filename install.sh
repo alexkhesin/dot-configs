@@ -77,11 +77,11 @@ if ! command -v clangd >/dev/null; then
   esac
 fi
 
-sys_stow() { stow --verbose=2 -t ~ --dotfiles "$@"; }
+my_stow() { stow --verbose=2 -t ~ --dotfiles "$@"; }
 
-sys_stow emacs tmux
+my_stow emacs tmux
 # zsh has dot-files inside of dot-directory
-sys_stow --no-folding zsh
+my_stow --no-folding zsh
 
 OS_SUFFIX=$(uname | tr '[:upper:]' '[:lower:]')
 
