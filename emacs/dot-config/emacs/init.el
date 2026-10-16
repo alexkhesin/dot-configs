@@ -322,11 +322,7 @@ one only offer \"Help\" and \"Turn off\"."
 ;; ----------------------------------------------------------------------------
 ;; Tree-sitter (Emacs 31+)
 ;; ----------------------------------------------------------------------------
-;; Grammars live under the state dir, not in the (stowed) config dir.
-(make-directory (expand-file-name "tree-sitter/" ak-state-dir) t)
-
-(setopt treesit-extra-load-path (list (expand-file-name "tree-sitter/" ak-state-dir))
-        treesit-auto-install-grammar 'always   ; build missing grammars without asking
+(setopt treesit-auto-install-grammar 'always   ; build missing grammars without asking
         treesit-enabled-modes t                ; use every ts mode Emacs has a remap for
         c-ts-mode-indent-style 'k&r)           ; attached braces, like Google style
 
