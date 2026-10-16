@@ -8,4 +8,4 @@ font-size = 13
 # macos-titlebar-style = hidden
 
 # Loaded after this file, so anything set there overrides the lines above.
-config-file = ~/dot-configs/public/ghostty/dot-config/ghostty/config.ghostty
+config-file = global.ghostty
