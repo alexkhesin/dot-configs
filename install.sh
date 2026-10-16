@@ -87,4 +87,4 @@ OS_SUFFIX=$(uname | tr '[:upper:]' '[:lower:]')
 
 echo "Installing *-${OS_SUFFIX} configs..."
 
-sys_stow *-${OS_SUFFIX}
+my_stow *-${OS_SUFFIX}
