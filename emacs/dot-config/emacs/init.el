@@ -302,21 +302,6 @@ one only offer \"Help\" and \"Turn off\"."
 ;; Bound once in the shared map. A mode's own map overrides prog-mode-map.
 (keymap-set prog-mode-map "C-<f10>" #'compile)
 
-;; To silence flymake warnings about unknown variables and functions
-(declare-function c-indent-defun "cc-cmds")
-(declare-function c-context-line-break "cc-cmds")
-(defvar c-mode-base-map)
-
-(defun ak-c-indent-after-paste (&rest _)
-  "Re-indent the surrounding defun after pasting in a CC Mode buffer."
-  (when (derived-mode-p 'c-mode 'c++-mode 'objc-mode 'java-mode)
-    (with-demoted-errors "c-indent-defun: %S"
-      (c-indent-defun))))
-
-(with-eval-after-load 'cc-mode
-  (advice-add 'cua-paste :after #'ak-c-indent-after-paste)
-  (keymap-set c-mode-base-map "RET" #'c-context-line-break))
-
 ;; Trim trailing whitespace only on lines I edited, everywhere except
 ;; for Markdown, because in Markdown adding two or more spaces means <br>
 (use-package ws-butler
@@ -333,6 +318,26 @@ one only offer \"Help\" and \"Turn off\"."
   (auto-save-visited-predicate (lambda () (derived-mode-p 'org-mode)))
   :config
   (auto-save-visited-mode 1))
+
+;; ----------------------------------------------------------------------------
+;; Tree-sitter (Emacs 31+)
+;; ----------------------------------------------------------------------------
+;; Grammars live under the state dir, not in the (stowed) config dir.
+(make-directory (expand-file-name "tree-sitter/" ak-state-dir) t)
+
+(setopt treesit-extra-load-path (list (expand-file-name "tree-sitter/" ak-state-dir))
+        treesit-auto-install-grammar 'always   ; build missing grammars without asking
+        treesit-enabled-modes t                ; use every ts mode Emacs has a remap for
+        c-ts-mode-indent-style 'k&r)           ; attached braces, like Google style
+
+;; Re-indent the surrounding defun after a paste in C/C++ ts-mode buffers.
+(declare-function c-ts-mode-indent-defun "c-ts-mode")
+(defun ak-c-indent-after-paste (&rest _)
+  "Re-indent the surrounding defun after pasting in a C/C++ ts-mode buffer."
+  (when (derived-mode-p 'c-ts-base-mode)
+    (with-demoted-errors "c-ts-mode-indent-defun: %S"
+      (c-ts-mode-indent-defun))))
+(advice-add 'cua-paste :after #'ak-c-indent-after-paste)
 
 ;; ----------------------------------------------------------------------------
 ;; Languages & Formats (Markdown, Dot, Org)
@@ -391,12 +396,14 @@ in the directory that has init.el"
 
 (use-package eglot
   :ensure nil
-  :hook ((c-mode c++-mode python-mode) . eglot-ensure)
+  :hook ((c-ts-mode c++-ts-mode python-ts-mode) . eglot-ensure)
   :custom
   (eglot-autoshutdown t)
-  ;; 'inlay hints' are parameter names and inferred types drawn inline. This
-  ;; adds annoying noise, disable it.
-  (eglot-ignored-server-capabilities '(:inlayHintProvider))
+  ;; inlayHintProvider: 'inlay hints' are parameter names and inferred types
+  ;; drawn inline. This adds annoying noise, disable it.
+  ;; documentOnTypeFormatting: clangd reformats on RET and turns a trailing
+  ;; "\" (e.g. in #define) plus the newline into a single space.
+  (eglot-ignored-server-capabilities '(:inlayHintProvider :documentOnTypeFormattingProvider))  
   :config
   (add-to-list 'eglot-server-programs
                '((python-ts-mode python-mode) . ("pyrefly" "lsp"))))
