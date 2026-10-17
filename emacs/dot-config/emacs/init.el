@@ -7,6 +7,14 @@
 (defvar ak-state-dir)
 (defvar ak-frame-width)
 
+;; early-init.el hides the menu bar everywhere except macOS, where GUI frames
+;; use the system menu bar.  That leaves terminal frames (emacs -nw / -t) on
+;; macOS with Emacs's own in-window menu bar, so hide it here.  This can't be
+;; done in early-init.el, because the window system isn't initialized yet and
+;; `display-graphic-p' is nil even for GUI frames at that point.
+(unless (display-graphic-p)
+  (menu-bar-mode -1))
+
 ;; Platfrom detection
 (defconst ak-mac-p (eq system-type 'darwin))
 (defconst ak-linux-p (eq system-type 'gnu/linux))
@@ -129,6 +137,15 @@ one only offer \"Help\" and \"Turn off\"."
   ;; the always-shown ones.
   (setopt mode-line-collapse-minor-modes (cons 'not ak-minor-modes-always-shown)))
 
+(use-package log-edit
+  :ensure nil   ; built in; my config otherwise defaults to :ensure t
+  :custom-face
+  ;; Version control messages (e.g. jj revision description) open in
+  ;; log-edit-mode.  The separator line is meant to be thin, but a terminal
+  ;; can't shrink a line, so it shows as a gray bar. Even in GUI mode it does
+  ;; not make sense for JJ because its log messages do not have any headers, so
+  ;; it just looks like a weird stray line on top of the buffer.
+  (log-edit-headers-separator ((t (:inverse-video nil :extend nil :height 1.0)))))
 ;; ----------------------------------------------------------------------------
 ;; UI & Utilities
 ;; ----------------------------------------------------------------------------
