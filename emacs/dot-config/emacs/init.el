@@ -335,6 +335,28 @@ one only offer \"Help\" and \"Turn off\"."
       (c-ts-mode-indent-defun))))
 (advice-add 'cua-paste :after #'ak-c-indent-after-paste)
 
+;; Coded by Claude.
+;; c-ts-mode leaves lines after a trailing "\" (macro continuation) at
+;; column 0 and treats the macro body as opaque text, so use a brace heuristic.
+(defun ak-c-ts-continuation-indent (_node _parent bol)
+  "Indent a line following a trailing backslash (macro body).
+One level in after a directive or a line ending in `{', one out for `}'."
+  (save-excursion
+    (goto-char bol)
+    (when (and (zerop (forward-line -1))
+               (progn (end-of-line) (eq (char-before) ?\\)))
+      (let ((closing (eq (char-after bol) ?}))
+            (opens (save-excursion
+                     (back-to-indentation)
+                     (or (eq (char-after) ?#)
+                         (looking-at-p ".*{[ \t]*\\\\$")))))
+        (back-to-indentation)
+        (cons (point) (+ (if opens c-ts-indent-offset 0)
+                         (if closing (- c-ts-indent-offset) 0)))))))
+(setq-default treesit-simple-indent-override-rules
+              '((c ak-c-ts-continuation-indent)
+                (cpp ak-c-ts-continuation-indent)))
+
 ;; ----------------------------------------------------------------------------
 ;; Languages & Formats (Markdown, Dot, Org)
 ;; ----------------------------------------------------------------------------
