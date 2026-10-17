@@ -1,6 +1,6 @@
 ;; -*- lexical-binding: t; -*-
 
-(when (< emacs-major-version 31) (error "Requires GNU Emacs 31 or above"))
+(when (< emacs-major-version 30) (error "Requires GNU Emacs 30 or above"))
 
 ;; Effectively disable GC during startup. gcmh (init.el) takes over afterwards.
 (let ((orig gc-cons-threshold))

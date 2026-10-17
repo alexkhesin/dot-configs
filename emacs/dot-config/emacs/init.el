@@ -302,6 +302,21 @@ one only offer \"Help\" and \"Turn off\"."
 ;; Bound once in the shared map. A mode's own map overrides prog-mode-map.
 (keymap-set prog-mode-map "C-<f10>" #'compile)
 
+;; To silence flymake warnings about unknown variables and functions
+(declare-function c-indent-defun "cc-cmds")
+(declare-function c-context-line-break "cc-cmds")
+(defvar c-mode-base-map)
+
+(defun ak-c-indent-after-paste (&rest _)
+  "Re-indent the surrounding defun after pasting in a CC Mode buffer."
+  (when (derived-mode-p 'c-mode 'c++-mode 'objc-mode 'java-mode)
+    (with-demoted-errors "c-indent-defun: %S"
+      (c-indent-defun))))
+
+(with-eval-after-load 'cc-mode
+  (advice-add 'cua-paste :after #'ak-c-indent-after-paste)
+  (keymap-set c-mode-base-map "RET" #'c-context-line-break))
+
 ;; Trim trailing whitespace only on lines I edited, everywhere except
 ;; for Markdown, because in Markdown adding two or more spaces means <br>
 (use-package ws-butler
@@ -318,44 +333,6 @@ one only offer \"Help\" and \"Turn off\"."
   (auto-save-visited-predicate (lambda () (derived-mode-p 'org-mode)))
   :config
   (auto-save-visited-mode 1))
-
-;; ----------------------------------------------------------------------------
-;; Tree-sitter (Emacs 31+)
-;; ----------------------------------------------------------------------------
-(setopt treesit-auto-install-grammar 'always   ; build missing grammars without asking
-        treesit-enabled-modes t                ; use every ts mode Emacs has a remap for
-        c-ts-mode-indent-style 'k&r)           ; attached braces, like Google style
-
-;; Re-indent the surrounding defun after a paste in C/C++ ts-mode buffers.
-(declare-function c-ts-mode-indent-defun "c-ts-mode")
-(defun ak-c-indent-after-paste (&rest _)
-  "Re-indent the surrounding defun after pasting in a C/C++ ts-mode buffer."
-  (when (derived-mode-p 'c-ts-base-mode)
-    (with-demoted-errors "c-ts-mode-indent-defun: %S"
-      (c-ts-mode-indent-defun))))
-(advice-add 'cua-paste :after #'ak-c-indent-after-paste)
-
-;; Coded by Claude.
-;; c-ts-mode leaves lines after a trailing "\" (macro continuation) at
-;; column 0 and treats the macro body as opaque text, so use a brace heuristic.
-(defun ak-c-ts-continuation-indent (_node _parent bol)
-  "Indent a line following a trailing backslash (macro body).
-One level in after a directive or a line ending in `{', one out for `}'."
-  (save-excursion
-    (goto-char bol)
-    (when (and (zerop (forward-line -1))
-               (progn (end-of-line) (eq (char-before) ?\\)))
-      (let ((closing (eq (char-after bol) ?}))
-            (opens (save-excursion
-                     (back-to-indentation)
-                     (or (eq (char-after) ?#)
-                         (looking-at-p ".*{[ \t]*\\\\$")))))
-        (back-to-indentation)
-        (cons (point) (+ (if opens c-ts-indent-offset 0)
-                         (if closing (- c-ts-indent-offset) 0)))))))
-(setq-default treesit-simple-indent-override-rules
-              '((c ak-c-ts-continuation-indent)
-                (cpp ak-c-ts-continuation-indent)))
 
 ;; ----------------------------------------------------------------------------
 ;; Languages & Formats (Markdown, Dot, Org)
@@ -414,14 +391,12 @@ in the directory that has init.el"
 
 (use-package eglot
   :ensure nil
-  :hook ((c-ts-mode c++-ts-mode python-ts-mode) . eglot-ensure)
+  :hook ((c-mode c++-mode python-mode) . eglot-ensure)
   :custom
   (eglot-autoshutdown t)
-  ;; inlayHintProvider: 'inlay hints' are parameter names and inferred types
-  ;; drawn inline. This adds annoying noise, disable it.
-  ;; documentOnTypeFormatting: clangd reformats on RET and turns a trailing
-  ;; "\" (e.g. in #define) plus the newline into a single space.
-  (eglot-ignored-server-capabilities '(:inlayHintProvider :documentOnTypeFormattingProvider))  
+  ;; 'inlay hints' are parameter names and inferred types drawn inline. This
+  ;; adds annoying noise, disable it.
+  (eglot-ignored-server-capabilities '(:inlayHintProvider 'documentOnTypeFormattingProvider))
   :config
   (add-to-list 'eglot-server-programs
                '((python-ts-mode python-mode) . ("pyrefly" "lsp"))))
