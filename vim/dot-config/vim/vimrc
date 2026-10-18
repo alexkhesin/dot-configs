@@ -1,0 +1,38 @@
+" Start from Vim's built-in defaults: filetype plugins/indent, syntax,
+" incsearch, scrolloff, showcmd, etc. (Requires Vim 8.0+.)
+unlet! skip_defaults_vim
+source $VIMRUNTIME/defaults.vim
+
+" Leave mouse selection to the terminal, so Cmd+C copies as usual.
+set mouse=
+
+" Load fzf's Vim plugin from wherever the fzf binary is installed.
+if executable('fzf')
+  let s:root = fnamemodify(resolve(exepath('fzf')), ':h:h')
+  let s:found = 0
+  for s:dir in [s:root,
+        \       s:root . '/share/fzf/vim',
+        \       s:root . '/share/doc/fzf/examples']
+    if filereadable(s:dir . '/plugin/fzf.vim')
+      execute 'set runtimepath+=' . fnameescape(s:dir)
+      let s:found = 1
+      break
+    endif
+  endfor
+  if !s:found
+    echoerr 'fzf is installed but its Vim plugin was not found under ' . s:root
+  endif
+endif
+
+" Keep history, registers and marks in the XDG state directory.
+let s:state = $XDG_STATE_HOME . '/vim'
+if !isdirectory(s:state)
+  call mkdir(s:state, 'p', 0700)
+endif
+let &viminfofile = s:state . '/viminfo'
+
+" Machine-local additions (not managed by stow), next to this file.
+let s:local = expand('<sfile>:p:h') . '/local.vim'
+if filereadable(s:local)
+  execute 'source' fnameescape(s:local)
+endif
