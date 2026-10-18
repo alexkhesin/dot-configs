@@ -72,21 +72,26 @@ bindkey '^[[B' down-line-or-beginning-search
 bindkey '^[OA' up-line-or-beginning-search
 bindkey '^[OB' down-line-or-beginning-search
 
-# Ghostty installed from source on glinux puts _ghostty there. Perhaps will be
-# useful for other things.
-if [[ -d "$HOME/.local/share/zsh/site-functions" ]]; then
-  fpath=("$HOME/.local/share/zsh/site-functions" $fpath)
-fi
+custom_fpaths=(
+  "$ZDOTDIR/functions"
+  # Ghostty installed from source puts files here. Perhaps will
+  # be useful for other things.
+  "$HOME/.local/share/zsh/site-functions"
+  # other local functions, not yet ready to be checked in
+  "$HOME/dot-configs/zsh/functions"
+)
 
-for custom_functions in "$ZDOTDIR/functions"; do
-  if [[ -d $custom_functions ]]; then
-    fpath=($custom_functions $fpath)
+for custom_fpath in "${custom_fpaths[@]}"; do
+  if [[ -d $custom_fpath ]]; then
+    fpath=($custom_fpath $fpath)
+
     # compinit will load all the _ prefixed functions, because it assumes that
     # they are for completions. This will lazy-load the rest.
     #
     # (:t) is like basename, so it enumerates all filenames found in this
     # location. So the filenames must correspond to function names.
-    autoload -Uz $custom_functions/*(:t)
+    # (N) prevents "no matches found" errors if a directory is empty.
+    autoload -Uz $custom_fpath/*(N:t)
   fi
 done
 
@@ -101,9 +106,13 @@ else
   compinit -C -d "$zcompdump"
 fi
 
-# importantly, on corp workstation, this overrides RPROMPT above
+# Importantly, on corp workstation, this overrides RPROMPT above
 local_additions="$ZDOTDIR/local.zsh"
 [[ -r $local_additions ]] && source $local_additions
+
+# Another source of local mods, for things I do not want to check in
+dot_config_additions="$HOME/dot-configs/zsh/local.zsh"
+[[ -r $dot_config_additions ]] && source $dot_config_additions
 
 # bash completion adapter for completions below
 autoload -Uz bashcompinit
