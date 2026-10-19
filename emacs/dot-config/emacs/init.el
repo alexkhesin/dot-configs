@@ -174,7 +174,12 @@ one only offer \"Help\" and \"Turn off\"."
 
 (use-package zenburn-theme
   :config
-  (load-theme 'zenburn t))
+  (load-theme 'zenburn t)
+  ;; Zenburn's lazy-highlight background is almost the buffer background, so
+  ;; other isearch matches are hard to see.  Set after load-theme, which would
+  ;; otherwise override it.
+  (custom-set-faces
+   '(lazy-highlight ((t (:foreground "#F0DFAF" :background "#4C7073" :weight bold))))))
 
 (keymap-global-set "C-S-z" #'undo-redo) ; with cua-mode, C-z is undo
 (use-package vundo
