@@ -1,3 +1,6 @@
 [user]
 	name = Alex Khesin
-	email = 1182112+alexkhesin@users.noreply.github.com
+	email = alex@khesin.com
+
+[includeIf "hasconfig:remote.*.url:git@github.com:*/**"]
+    path = config-github

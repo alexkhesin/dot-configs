@@ -1,0 +1,5 @@
+if jj git remote list | grep -q 'github\.com'; then
+  jj config set --repo user.email "1182112+alexkhesin@users.noreply.github.com"
+  jj metaedit --update-author -r @
+  echo "set GitHub noreply identity"
+fi
