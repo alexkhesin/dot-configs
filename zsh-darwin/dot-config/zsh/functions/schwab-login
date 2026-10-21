@@ -1,0 +1,48 @@
+# schwab-login [name ...]: sign in Schwab MCP logins (default: personal),
+# e.g. 'schwab-login trusts personal'. Each <name> writes
+# ~/.local/share/schwab-mcp/token-<name>.yaml for Claude's 'schwab-<name>'
+# server, opening Schwab in the Chrome profile signed into the email stored
+# at op://Private/Schwab API/<name>.
+#
+# Autoloaded function. The body runs in a subshell, so exit and umask stay
+# inside it and never affect the calling shell.
+
+(
+  chrome="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+  umask 077
+
+  for name in ${@:-personal}; do
+    token=$HOME/.local/share/schwab-mcp/token-$name.yaml
+    echo "Signing in '$name'"
+
+    email=$(op read "op://Private/Schwab API/$name") || exit 1
+
+    profile=$(python3 - "$email" <<'EOF'
+import json, os, sys
+path = os.path.expanduser("~/Library/Application Support/Google/Chrome/Local State")
+cache = json.load(open(path))["profile"]["info_cache"]
+email = sys.argv[1].lower()
+match = [d for d, i in cache.items() if i.get("user_name", "").lower() == email]
+if len(match) != 1:
+    sys.exit(f"Expected one Chrome profile for {email}, found {len(match)}")
+print(match[0])
+EOF
+    ) || exit 1
+
+    # Free the callback port if an old login is still waiting on it
+    kill $(lsof -t -iTCP:8182 -sTCP:LISTEN) 2>/dev/null
+
+    mkdir -p ${token:h}
+    rm -f "$token.new"   # leftover from an earlier failed sign-in
+    BROWSER="'$chrome' --profile-directory='$profile' %s" \
+    SCHWAB_CLIENT_ID="op://Private/Schwab API/app_key" \
+    SCHWAB_CLIENT_SECRET="op://Private/Schwab API/app_secret" \
+    op run --no-masking -- ~/.local/bin/schwab-mcp auth --token-path "$token.new" || exit 1
+
+    # Swap in the new token only after a successful sign-in, expired or not
+    mv "$token.new" "$token" || exit 1
+
+    pkill -f "schwab-mcp server.*--token-path $token( |\$)"
+    echo "Signed in. In Claude, turn the 'schwab-$name' server off and on again."
+  done
+)
