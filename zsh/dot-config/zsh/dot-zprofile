@@ -19,6 +19,12 @@ export google_zsh_flysolo="yes"
 ensure_dir "$XDG_CONFIG_HOME" "$XDG_STATE_HOME" "$XDG_DATA_HOME"
 ensure_dir "$XDG_CACHE_HOME" "$XDG_BIN_HOME"
 
+# Move some other misc files
+export PYTHON_HISTORY="${XDG_STATE_HOME}/python/history"
+export LESSHISTFILE="${XDG_STATE_HOME}/less/history"
+
+ensure_dir "${XDG_STATE_HOME}/less" "${XDG_STATE_HOME}/python" "$XDG_STATE_HOME/vim"
+
 path=($XDG_BIN_HOME $path)
 
 # Add Python 3.14

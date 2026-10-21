@@ -1,3 +1,5 @@
+set viminfofile=$XDG_STATE_HOME/vim/viminfo
+
 " Start from Vim's built-in defaults: filetype plugins/indent, syntax,
 " incsearch, scrolloff, showcmd, etc. (Requires Vim 8.0+.)
 unlet! skip_defaults_vim
