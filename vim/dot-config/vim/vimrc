@@ -1,4 +1,6 @@
+" Move dot files to XDG directories
 set viminfofile=$XDG_STATE_HOME/vim/viminfo
+let g:netrw_home = $XDG_STATE_HOME . '/vim'
 
 " Start from Vim's built-in defaults: filetype plugins/indent, syntax,
 " incsearch, scrolloff, showcmd, etc. (Requires Vim 8.0+.)
