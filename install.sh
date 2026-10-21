@@ -79,7 +79,7 @@ fi
 
 my_stow() { stow --verbose=2 -t ~ --dotfiles "$@"; }
 
-my_stow emacs tmux ghostty vim
+my_stow emacs tmux ghostty vim git
 # zsh has dot-files inside of dot-directory
 my_stow --no-folding zsh
 
