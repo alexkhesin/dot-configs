@@ -1,0 +1,13 @@
+#!/bin/zsh
+# Notify when any Schwab token is 4+ days old (the server rejects it at 5).
+# Run daily by ~/Library/LaunchAgents/com.alex.schwab-token-check.plist.
+
+for token in $HOME/.local/share/schwab-mcp/token-*.yaml(N); do
+  name=${${token:t:r}#token-}
+  created=$(awk '/creation_timestamp/ {print int($2)}' "$token")
+  age=$(( ($(date +%s) - ${created:-0}) / 86400 ))
+
+  if (( age >= 4 )); then
+    osascript -e "display notification \"'$name' token is $age days old. Run schwab-login.\" with title \"Schwab MCP\""
+  fi
+done

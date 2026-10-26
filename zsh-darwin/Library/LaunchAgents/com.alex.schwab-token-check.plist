@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.alex.schwab-token-check</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/alex/.local/bin/schwab-token-check</string>
+  </array>
+
+  <!-- Daily at 9:00; runs on wake if the Mac was asleep -->
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>9</integer>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+
+  <key>RunAtLoad</key>
+  <true/>
+</dict>
+</plist>
