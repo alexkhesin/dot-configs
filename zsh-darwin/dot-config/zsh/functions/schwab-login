@@ -4,12 +4,23 @@
 # server, opening Schwab in the Chrome profile signed into the email stored
 # at op://Private/Schwab API/<name>.
 #
+# Quits Claude Desktop first and reopens it when done (even if a sign-in
+# fails): a running server keeps its old token in memory, and Claude's
+# connector toggle can't restart a stopped server.
+#
 # Autoloaded function. The body runs in a subshell, so exit and umask stay
 # inside it and never affect the calling shell.
 
 (
   chrome="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
   umask 077
+
+  # Quit Claude Desktop so its Schwab servers reload the new tokens on reopen
+  if pgrep -xq Claude; then
+    osascript -e 'quit app "Claude"'
+    for i in {1..20}; do pgrep -xq Claude || break; sleep 0.5; done
+  fi
+  trap 'echo "Reopening Claude"; open -a Claude' EXIT
 
   for name in ${@:-personal}; do
     token=$HOME/.local/share/schwab-mcp/token-$name.yaml
@@ -42,7 +53,6 @@ EOF
     # Swap in the new token only after a successful sign-in, expired or not
     mv "$token.new" "$token" || exit 1
 
-    pkill -f "schwab-mcp server.*--token-path $token( |\$)"
-    echo "Signed in. In Claude, turn the 'schwab-$name' server off and on again."
+    echo "Signed in '$name'"
   done
 )
