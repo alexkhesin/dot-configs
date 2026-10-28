@@ -40,7 +40,7 @@ setopt PUSHD_MINUS          # Invert the meaning of + and - for pushd
 
 # History Configuration
 unsetopt SHARE_HISTORY          # Do NOT auto-import commands from other shells
-setopt INC_APPEND_HISTORY_TIME  # Write to HISTFILE immediately upon command completion
+setopt INC_APPEND_HISTORY       # Write to HISTFILE immediately when command starts
 setopt EXTENDED_HISTORY         # Save timestamps & elapsed execution duration
 setopt HIST_IGNORE_ALL_DUPS     # Purge older duplicates when writing new entries
 setopt HIST_SAVE_NO_DUPS        # Prevent writing duplicates to the file
