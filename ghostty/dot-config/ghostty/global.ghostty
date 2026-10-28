@@ -1,3 +1,27 @@
+# --- SSH shell integration ---
+#   ssh-env:      fall back to TERM=xterm-256color, forward COLORTERM/TERM_PROGRAM
+#   ssh-terminfo: install xterm-ghostty terminfo on remote hosts (cached;
+#                 see `ghostty +ssh-cache`)
+#
+# Hosts without `tic` (e.g. Synology NAS) fail with "InstallFailed" on every
+# connect. Install the compiled entry by hand (HOST=user@host):
+#
+#   infocmp -x xterm-ghostty > /tmp/ghostty.ti
+#   tic -x -o /tmp/ghostty-terminfo /tmp/ghostty.ti
+#   command ssh $HOST 'mkdir -p ~/.terminfo/x ~/.terminfo/78'
+#   for d in x 78; do
+#     command ssh $HOST "cat > ~/.terminfo/$d/xterm-ghostty" \
+#       < /tmp/ghostty-terminfo/78/xterm-ghostty
+#   done
+#   ghostty +ssh-cache --add=$HOST
+#
+# (`command ssh` bypasses the Ghostty ssh wrapper; x/ and 78/ cover both
+# letter and hex terminfo dir layouts. Verify on remote: echo $TERM)
+
+# Do not enable `sudo` integration, it causes problems with corp setup
+# (search for "sorry, you are not allowed to preserve the environment")
+shell-integration-features = ssh-env,ssh-terminfo
+
 # --- Typography ---
 font-family = "JetBrains Mono"
 
