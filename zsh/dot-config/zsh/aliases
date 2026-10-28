@@ -4,6 +4,9 @@ alias e1="$XDG_BIN_HOME/emacs-connect emacs.1"
 alias e2="$XDG_BIN_HOME/emacs-connect emacs.2"
 alias e3="$XDG_BIN_HOME/emacs-connect emacs.3"
 alias e4="$XDG_BIN_HOME/emacs-connect emacs.4"
+alias eza="eza --git --group-directories-first"
+alias ll=eza
+
 
 if [ "$(uname)" = "Linux" ]; then
   alias ls='ls --color=auto'

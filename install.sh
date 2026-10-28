@@ -11,7 +11,7 @@ PATH="$PATH:/opt/homebrew/bin/"
 case "$(uname -s)" in
   Darwin)
     xcode-select -p >/dev/null 2>&1 || xcode-select --install # C compiler
-    brew install enchant pkgconf stow fzf uv
+    brew install enchant pkgconf stow fzf uv bat eza
     ;;
   Linux)
     if ! command -v uv >/dev/null; then
@@ -23,11 +23,11 @@ case "$(uname -s)" in
     fi
 
     if command -v apt-get >/dev/null; then
-      sudo apt-get install -y build-essential libenchant-2-dev pkgconf hunspell-en-us stow fzf
+      sudo apt-get install -y build-essential libenchant-2-dev pkgconf hunspell-en-us stow fzf uv bat eza
     elif command -v dnf >/dev/null; then
-      sudo dnf install -y gcc enchant2-devel pkgconf-pkg-config hunspell-en-US stow fzf
+      sudo dnf install -y gcc enchant2-devel pkgconf-pkg-config hunspell-en-US stow fzf uv bat eza
     elif command -v pacman >/dev/null; then
-      sudo pacman -S --needed --noconfirm base-devel enchant pkgconf hunspell-en_us stow fzf
+      sudo pacman -S --needed --noconfirm base-devel enchant pkgconf hunspell-en_us stow fzf uv bat eza
     else
       echo "Install: stow, enchant (+dev files), pkgconf, a C compiler, a hunspell English dictionary" >&2
       exit 1
@@ -79,7 +79,7 @@ fi
 
 my_stow() { stow --verbose=2 -t ~ --dotfiles "$@"; }
 
-my_stow emacs tmux ghostty vim git
+my_stow emacs tmux ghostty vim git bat
 # zsh has dot-files inside of dot-directory
 my_stow --no-folding zsh
 
