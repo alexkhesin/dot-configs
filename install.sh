@@ -88,3 +88,6 @@ OS_SUFFIX=$(uname | tr '[:upper:]' '[:lower:]')
 echo "Installing *-${OS_SUFFIX} configs..."
 
 my_stow *-${OS_SUFFIX}
+
+# set email address for future github commits
+jj config set --repo user.email "1182112+alexkhesin@users.noreply.github.com"
