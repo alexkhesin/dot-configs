@@ -79,15 +79,11 @@ fi
 
 my_stow() { stow --verbose=2 -t ~ --dotfiles "$@"; }
 
-my_stow emacs tmux ghostty vim git bat
-# zsh has dot-files inside of dot-directory
-my_stow --no-folding zsh
-
 OS_SUFFIX=$(uname | tr '[:upper:]' '[:lower:]')
 
-echo "Installing *-${OS_SUFFIX} configs..."
-
-my_stow *-${OS_SUFFIX}
+my_stow emacs tmux ghostty vim git bat jj *-${OS_SUFFIX}
+# zsh has dot-files inside of dot-directory
+my_stow --no-folding zsh
 
 # set email address for future github commits
 jj config set --repo user.email "1182112+alexkhesin@users.noreply.github.com"
