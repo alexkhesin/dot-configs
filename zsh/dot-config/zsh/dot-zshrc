@@ -19,8 +19,6 @@ if [[ -r "${XDG_CACHE_HOME}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
   source "${XDG_CACHE_HOME}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
 
-. "$ZDOTDIR/aliases"
-
 set -o ignoreeof    # do not exit upon reading ^D
 
 #
@@ -111,12 +109,11 @@ else
 fi
 
 # Importantly, on corp workstation, this overrides RPROMPT above
-local_additions="$ZDOTDIR/local.zsh"
-[[ -r $local_additions ]] && source $local_additions
-
-# Another source of local mods, for things I do not want to check in
-dot_config_additions="$HOME/dot-configs/zsh/local.zsh"
-[[ -r $dot_config_additions ]] && source $dot_config_additions
+if [[ -d "$ZDOTDIR/conf.d" ]]; then
+  for file in "$ZDOTDIR/conf.d/"*.zsh(N); do
+    source "$file"
+  done
+fi
 
 # bash completion adapter for completions below
 autoload -Uz bashcompinit

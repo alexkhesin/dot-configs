@@ -6,16 +6,3 @@ alias e3="$XDG_BIN_HOME/emacs-connect emacs.3"
 alias e4="$XDG_BIN_HOME/emacs-connect emacs.4"
 alias eza="eza --git --group-directories-first"
 alias ll=eza
-
-
-if [ "$(uname)" = "Linux" ]; then
-  alias ls='ls --color=auto'
-  alias grep='grep --color=auto'
-  alias fgrep='fgrep --color=auto'
-  alias egrep='egrep --color=auto'
-  alias diff='diff --color=auto'
-  alias ip='ip --color=auto'
-
-  # corp
-  alias fu=fileutil
-fi
