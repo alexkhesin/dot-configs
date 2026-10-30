@@ -45,9 +45,10 @@ my_stow() { stow --verbose=2 -t ~ --dotfiles "$@"; }
 
 OS_SUFFIX=$(uname | tr '[:upper:]' '[:lower:]')
 
-my_stow emacs tmux ghostty vim git bat jj *-${OS_SUFFIX}
-# zsh has dot-files inside of dot-directory
-my_stow --no-folding zsh
+my_stow tmux ghostty vim git bat jj *-${OS_SUFFIX}
+# * zsh has dot-files inside of dot-directory
+# * both zsh and emaics are populated from two different stow repositories
+my_stow --no-folding zsh emacs
 
 # set email address for future github commits
 jj config set --repo user.email "1182112+alexkhesin@users.noreply.github.com"

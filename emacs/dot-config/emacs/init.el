@@ -400,8 +400,9 @@ in the directory that has init.el"
   :custom
   ;; Flymake's Elisp byte-compile backend refuses to check files Emacs does not
   ;; trust (init.el is trusted automatically; local.el is not).
-  (trusted-content '("~/dot-configs/emacs.d/local.el"))
-  (flymake-mode-line-lighter "FM")   ; or "" to show only the error counters
+  (trusted-content
+   (list (abbreviate-file-name
+          (file-truename (expand-file-name "local.el" user-emacs-directory)))))   (flymake-mode-line-lighter "FM")   ; or "" to show only the error counters
   ;; Flymake's Elisp checker runs a separate `emacs -Q --batch' process that
   ;; does not know about installed package or early-init.el. Give it our
   ;; load-path so it can find installed packages, which silences most "unknown
@@ -563,7 +564,7 @@ in the directory that has init.el"
 ;; Local additions
 ;; Local additions (work-specific settings, loaded last so they win).
 ;; Only the Linux machines have this file; there, a missing file is an error.
-(let ((local (expand-file-name "local" "~/dot-configs/emacs")))
+(let ((local (expand-file-name "local" user-emacs-directory)))
   (if ak-linux-p
       (load local nil 'nomessage)     ; no 'noerror: signals file-missing
     (load local 'noerror 'nomessage)))
