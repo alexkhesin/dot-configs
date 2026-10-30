@@ -36,3 +36,9 @@ fi
 if [[ -r /opt/homebrew/bin/brew ]]; then
   eval "$(/opt/homebrew/bin/brew shellenv zsh)"
 fi
+
+# Use `bat` as pager for `man`, to colorize the output
+# `bat` is called `batcat` on Linux
+_bat_bin=$(command -v batcat || command -v bat)
+[ -n "$_bat_bin" ] && export MANPAGER="sh -c 'col -bx | $_bat_bin --language=man --style=plain --paging=always'"
+unset _bat_bin
