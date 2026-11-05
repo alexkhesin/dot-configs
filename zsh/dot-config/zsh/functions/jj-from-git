@@ -1,0 +1,1 @@
+jj git fetch && jj rebase -o 'trunk()'

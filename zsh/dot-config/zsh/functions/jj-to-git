@@ -1,0 +1,2 @@
+local b=${1:-main}
+jj bookmark move "$b" --to @- && jj git push --bookmark "$b"
