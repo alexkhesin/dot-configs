@@ -50,5 +50,8 @@ my_stow tmux ghostty vim git bat jj *-${OS_SUFFIX}
 # * both zsh and emaics are populated from two different stow repositories
 my_stow --no-folding zsh emacs
 
+# update zsh plugins (update-plugins and $PLUGIN_DIR come from .zshrc)
+zsh -ic update-plugins
+
 # set email address for future github commits
 jj config set --repo user.email "1182112+alexkhesin@users.noreply.github.com"
