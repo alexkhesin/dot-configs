@@ -100,13 +100,19 @@ done
 autoload -Uz compinit
 
 zcompdump="${XDG_CACHE_HOME}/zsh/zcompdump-${ZSH_VERSION}"
-# If .zcompdump is older than 24 hours, regenerate it without -C
-# This caches options for a day, but regenerates if new tools are added.
+# If .zcompdump is older than 24 hours, do the full (slow) check without -C,
+# which picks up newly installed completions. compinit only rewrites the dump
+# when the number of completion files changed, so touch it; otherwise the dump
+# stays "old" and every shell after the first day pays for the full check.
 if [[ -n ${zcompdump}(#qN.mh+24) ]]; then
   compinit -d "$zcompdump"
+  touch "$zcompdump"
 else
   compinit -C -d "$zcompdump"
 fi
+# Precompile the dump; zsh uses the .zwc automatically when it is newer.
+# Recompiles once a day, after the touch above.
+[[ ${zcompdump}.zwc -nt $zcompdump ]] || zcompile "$zcompdump"
 
 # Importantly, on corp workstation, this overrides RPROMPT above
 if [[ -d "$ZDOTDIR/conf.d" ]]; then
