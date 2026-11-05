@@ -6,3 +6,4 @@ alias e3="$XDG_BIN_HOME/emacs-connect emacs.3"
 alias e4="$XDG_BIN_HOME/emacs-connect emacs.4"
 alias eza="eza --git --group-directories-first"
 alias ll=eza
+alias lt="eza --tree"
