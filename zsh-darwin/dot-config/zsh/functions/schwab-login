@@ -1,5 +1,5 @@
-# schwab-login [name ...]: sign in Schwab MCP logins (default: personal),
-# e.g. 'schwab-login trusts personal'. Each <name> writes
+# schwab-login [name ...]: sign in Schwab MCP logins (default: personal trusts),
+# e.g. 'schwab-login trusts'. Each <name> writes
 # ~/.local/share/schwab-mcp/token-<name>.yaml for Claude's 'schwab-<name>'
 # server, opening Schwab in the Chrome profile signed into the email stored
 # at op://Private/Schwab API/<name>.
@@ -22,7 +22,9 @@
   fi
   trap 'echo "Reopening Claude"; open -a Claude' EXIT
 
-  for name in ${@:-personal}; do
+  # No names given: sign in both logins by making them the arguments
+  (( $# )) || set -- personal trusts
+  for name in "$@"; do
     token=$HOME/.local/share/schwab-mcp/token-$name.yaml
     echo "Signing in '$name'"
 
