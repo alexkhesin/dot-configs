@@ -1,0 +1,16 @@
+local f out
+for f in "$@"; do
+  out="${f:r} - OCR.pdf"
+  if [[ -e "$out" ]]; then
+    echo "skip (exists): $out"
+    continue
+  fi
+  echo "OCR: $f"
+  ocrmypdf \
+    --skip-text \
+    --rotate-pages \
+    --deskew \
+    --output-type pdf \
+    -l eng \
+    "$f" "$out" || echo "FAILED: $f"
+done
